@@ -2,6 +2,7 @@ import { Outlet, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
+import AuthModal from "../auth/AuthModal";
 
 export default function Layout() {
   const location = useLocation();
@@ -23,6 +24,7 @@ export default function Layout() {
         <Outlet />
       </main>
       <Footer />
+      <AuthModal />
     </div>
   );
 }

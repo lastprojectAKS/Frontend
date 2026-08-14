@@ -62,7 +62,7 @@ export default function Checkout() {
                 <input
                   required
                   type="text"
-                  placeholder="Jordan Avery"
+                  placeholder="class project"
                   className="h-11 rounded-lg border border-border-strong bg-bg-secondary px-3.5 text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent"
                 />
               </label>

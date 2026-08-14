@@ -34,8 +34,9 @@ export const mockBookings = [
 export const mockFavourites = ["dune-part-two", "inception", "oppenheimer"];
 
 export const mockProfile = {
-  name: "Jordan Avery",
-  email: "jordan.avery@example.com",
+  name: "CLASS PROJECT",
+  email: "testproject@test.com",
   memberSince: "2024",
   loyaltyPoints: 240,
 };
+

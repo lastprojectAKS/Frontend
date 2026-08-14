@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Search, MapPin, User, Menu, Clapperboard, ChevronDown } from "lucide-react";
+import { Search, MapPin, User, Menu, Clapperboard, ChevronDown, LogOut } from "lucide-react";
 import MobileDrawer from "./MobileDrawer";
 import useScrollPosition from "../../hooks/useScrollPosition";
+import { useAuth } from "../../context/AuthContext";
+import { useToast } from "../../context/ToastContext";
 
 const LINKS = [
   { to: "/", label: "Home" },
@@ -21,13 +23,18 @@ export default function Navbar() {
   const scrolled = useScrollPosition(60);
   const solid = scrolled || !isHome;
 
+  const { isLoggedIn, user, logout, openAuthModal } = useAuth();
+  const { showToast } = useToast();
+
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const [cityOpen, setCityOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   const [city, setCity] = useState(CITIES[0]);
   const searchInputRef = useRef(null);
   const cityRef = useRef(null);
+  const accountRef = useRef(null);
 
   useEffect(() => {
     if (searchOpen) searchInputRef.current?.focus();
@@ -36,10 +43,18 @@ export default function Navbar() {
   useEffect(() => {
     function handleClickOutside(e) {
       if (cityRef.current && !cityRef.current.contains(e.target)) setCityOpen(false);
+      if (accountRef.current && !accountRef.current.contains(e.target)) setAccountOpen(false);
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  function handleLogout() {
+    logout();
+    setAccountOpen(false);
+    showToast("You've been logged out");
+    if (location.pathname === "/profile") navigate("/");
+  }
 
   function handleSearchSubmit(e) {
     e.preventDefault();
@@ -157,13 +172,63 @@ export default function Navbar() {
               )}
             </div>
 
-            <NavLink
-              to="/profile"
-              aria-label="My profile"
-              className="hidden h-9 w-9 items-center justify-center rounded-full bg-surface text-text-secondary transition-colors hover:text-text-primary sm:flex"
-            >
-              <User className="h-4 w-4" aria-hidden="true" />
-            </NavLink>
+            {isLoggedIn ? (
+              <div className="relative hidden sm:block" ref={accountRef}>
+                <button
+                  type="button"
+                  onClick={() => setAccountOpen((v) => !v)}
+                  aria-haspopup="menu"
+                  aria-expanded={accountOpen}
+                  aria-label="Account menu"
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-accent/15 text-xs font-bold text-accent-text transition-colors hover:bg-accent/25"
+                >
+                  {user.name
+                    .split(" ")
+                    .map((part) => part[0])
+                    .slice(0, 2)
+                    .join("")
+                    .toUpperCase()}
+                </button>
+
+                {accountOpen && (
+                  <div
+                    role="menu"
+                    className="absolute right-0 top-full mt-2 w-52 overflow-hidden rounded-xl border border-border-strong bg-surface py-1 shadow-elevated"
+                  >
+                    <div className="border-b border-border px-3.5 py-2.5">
+                      <p className="truncate text-sm font-semibold text-text-primary">{user.name}</p>
+                      <p className="truncate text-xs text-text-muted">{user.email}</p>
+                    </div>
+                    <NavLink
+                      to="/profile"
+                      role="menuitem"
+                      onClick={() => setAccountOpen(false)}
+                      className="flex items-center gap-2 px-3.5 py-2.5 text-sm text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
+                    >
+                      <User className="h-4 w-4" aria-hidden="true" />
+                      My Profile
+                    </NavLink>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={handleLogout}
+                      className="flex w-full items-center gap-2 px-3.5 py-2.5 text-left text-sm text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
+                    >
+                      <LogOut className="h-4 w-4" aria-hidden="true" />
+                      Log Out
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => openAuthModal("login")}
+                className="hidden rounded-lg px-3 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface sm:block"
+              >
+                Login
+              </button>
+            )}
 
             <button
               type="button"

@@ -1,7 +1,9 @@
 import { useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { NavLink } from "react-router-dom";
-import { X, User } from "lucide-react";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { X, User, LogOut, LogIn } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
+import { useToast } from "../../context/ToastContext";
 
 const LINKS = [
   { to: "/", label: "Home" },
@@ -11,6 +13,23 @@ const LINKS = [
 ];
 
 export default function MobileDrawer({ open, onClose }) {
+  const { isLoggedIn, user, logout, openAuthModal } = useAuth();
+  const { showToast } = useToast();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  function handleLogout() {
+    logout();
+    onClose();
+    showToast("You've been logged out");
+    if (location.pathname === "/profile") navigate("/");
+  }
+
+  function handleLoginClick() {
+    onClose();
+    openAuthModal("login");
+  }
+
   useEffect(() => {
     if (!open) return undefined;
     document.body.style.overflow = "hidden";
@@ -70,14 +89,41 @@ export default function MobileDrawer({ open, onClose }) {
               ))}
             </ul>
 
-            <NavLink
-              to="/profile"
-              onClick={onClose}
-              className="mt-auto flex items-center gap-2 rounded-lg bg-surface px-3 py-3 text-sm font-semibold text-text-primary"
-            >
-              <User className="h-4 w-4" aria-hidden="true" />
-              My Profile
-            </NavLink>
+            <div className="mt-auto flex flex-col gap-2">
+              {isLoggedIn ? (
+                <>
+                  <div className="rounded-lg bg-surface px-3 py-3">
+                    <p className="truncate text-sm font-semibold text-text-primary">{user.name}</p>
+                    <p className="truncate text-xs text-text-muted">{user.email}</p>
+                  </div>
+                  <NavLink
+                    to="/profile"
+                    onClick={onClose}
+                    className="flex items-center gap-2 rounded-lg bg-surface px-3 py-3 text-sm font-semibold text-text-primary"
+                  >
+                    <User className="h-4 w-4" aria-hidden="true" />
+                    My Profile
+                  </NavLink>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="flex items-center gap-2 rounded-lg px-3 py-3 text-sm font-semibold text-text-secondary transition-colors hover:bg-surface hover:text-text-primary"
+                  >
+                    <LogOut className="h-4 w-4" aria-hidden="true" />
+                    Log Out
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleLoginClick}
+                  className="flex items-center justify-center gap-2 rounded-lg bg-accent px-3 py-3 text-sm font-semibold text-white transition-colors hover:bg-accent-hover"
+                >
+                  <LogIn className="h-4 w-4" aria-hidden="true" />
+                  Log In
+                </button>
+              )}
+            </div>
           </motion.nav>
         </>
       )}
