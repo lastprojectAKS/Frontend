@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { Search, MapPin, User, Menu, Clapperboard, ChevronDown, LogOut } from "lucide-react";
+import { Search, MapPin, User, Menu, Clapperboard, ChevronDown, LogOut, Sun, Moon } from "lucide-react";
 import MobileDrawer from "./MobileDrawer";
 import useScrollPosition from "../../hooks/useScrollPosition";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
+import { useTheme } from "../../context/ThemeContext";
 
 const LINKS = [
   { to: "/", label: "Home" },
@@ -25,6 +25,7 @@ export default function Navbar() {
 
   const { isLoggedIn, user, logout, openAuthModal } = useAuth();
   const { showToast } = useToast();
+  const { isDark, toggleTheme } = useTheme();
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -64,14 +65,10 @@ export default function Navbar() {
 
   return (
     <>
-      <motion.header
-        className="fixed inset-x-0 top-0 z-[80] border-b"
-        animate={{
-          backgroundColor: solid ? "rgba(11,11,15,0.92)" : "rgba(11,11,15,0)",
-          borderColor: solid ? "rgba(38,38,47,1)" : "rgba(38,38,47,0)",
-          backdropFilter: solid ? "blur(12px)" : "blur(0px)",
-        }}
-        transition={{ duration: 0.25, ease: "easeOut" }}
+      <header
+        className={`fixed inset-x-0 top-0 z-[80] border-b transition-colors duration-300 ${
+          solid ? "border-border bg-bg-primary/92 backdrop-blur-md" : "border-transparent bg-transparent"
+        }`}
       >
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
           <NavLink to="/" className="flex items-center gap-2 text-lg font-extrabold text-text-primary">
@@ -172,6 +169,16 @@ export default function Navbar() {
               )}
             </div>
 
+            <button
+              type="button"
+              onClick={toggleTheme}
+              aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+              aria-pressed={isDark}
+              className="flex h-9 w-9 items-center justify-center rounded-full text-text-secondary transition-colors hover:bg-surface hover:text-text-primary"
+            >
+              {isDark ? <Sun className="h-4 w-4" aria-hidden="true" /> : <Moon className="h-4 w-4" aria-hidden="true" />}
+            </button>
+
             {isLoggedIn ? (
               <div className="relative hidden sm:block" ref={accountRef}>
                 <button
@@ -240,7 +247,7 @@ export default function Navbar() {
             </button>
           </div>
         </div>
-      </motion.header>
+      </header>
 
       <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
     </>

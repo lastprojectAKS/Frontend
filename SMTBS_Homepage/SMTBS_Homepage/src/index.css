@@ -35,6 +35,44 @@
   --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.35);
 }
 
+/*
+ * Light theme — dark (above) is the default look; this overrides the same
+ * custom properties when the user opts into light mode. Every Tailwind
+ * utility (bg-bg-primary, text-text-secondary, etc.) reads these variables
+ * at paint time, so nothing else needs to change per-component.
+ *
+ * Some tokens use different values than a naive "invert the dark ones"
+ * would give: on a white surface, the dark theme's --color-accent-text and
+ * the semantic success/warning/error colors fall short of 4.5:1 contrast,
+ * so light mode uses darker variants of those specific tokens (verified
+ * against white: muted 5.28:1, secondary 7.73:1, accent-text/success/
+ * warning all ~4.65-4.70:1).
+ */
+:root[data-theme="light"] {
+  --color-bg-primary: #f8fafc;
+  --color-bg-secondary: #f1f2f5;
+  --color-surface: #ffffff;
+  --color-surface-hover: #f4f4f6;
+
+  --color-text-primary: #0f1115;
+  --color-text-secondary: #52525b;
+  --color-text-muted: #6b6b74;
+
+  --color-border: #e4e4e7;
+  --color-border-strong: #d4d4d8;
+
+  --color-accent: #e11d48;
+  --color-accent-hover: #f43f5e;
+  --color-accent-text: #e11d48;
+
+  --color-success: #178640;
+  --color-warning: #a26807;
+  --color-error: #d73d3d;
+
+  --shadow-elevated: 0 8px 24px rgba(15, 17, 21, 0.12), 0 2px 8px rgba(15, 17, 21, 0.08);
+  --shadow-card: 0 4px 16px rgba(15, 17, 21, 0.08);
+}
+
 @layer base {
   * {
     border-color: var(--color-border);
@@ -49,6 +87,13 @@
     color: var(--color-text-primary);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    transition: background-color 0.25s ease, color 0.25s ease;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    body {
+      transition: none;
+    }
   }
 
   ::selection {
@@ -69,5 +114,40 @@
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+
+  /*
+   * Scopes a subtree to always render with the dark palette, regardless of
+   * the site-wide theme — for movie backdrop heroes, where a blurred poster
+   * behind light-mode's near-white overlay would wash out into an
+   * unreadable haze instead of a cinematic gradient. Every component inside
+   * still just reads var(--color-*), so Badge/Button/Rating etc. need no
+   * changes; this only shadows the values they resolve to.
+   */
+  .theme-dark-scope {
+    --color-bg-primary: #0b0b0f;
+    --color-bg-secondary: #121217;
+    --color-surface: #18181f;
+    --color-surface-hover: #1e1e28;
+
+    --color-text-primary: #f8fafc;
+    --color-text-secondary: #a1a1aa;
+    --color-text-muted: #85858e;
+
+    --color-border: #26262f;
+    --color-border-strong: #34343e;
+
+    --color-accent: #e11d48;
+    --color-accent-hover: #f43f5e;
+    --color-accent-text: #e64669;
+
+    --color-success: #22c55e;
+    --color-warning: #f59e0b;
+    --color-error: #ef4444;
+
+    --shadow-elevated: 0 8px 24px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.3);
+    --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.35);
+
+    color: var(--color-text-primary);
   }
 }

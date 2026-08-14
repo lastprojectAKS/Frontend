@@ -5,18 +5,21 @@ import App from "./App";
 import { BookingProvider } from "./context/BookingContext";
 import { AuthProvider } from "./context/AuthContext";
 import { ToastProvider } from "./context/ToastContext";
+import { ThemeProvider } from "./context/ThemeContext";
 import "./index.css";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <BrowserRouter>
-      <ToastProvider>
-        <AuthProvider>
-          <BookingProvider>
-            <App />
-          </BookingProvider>
-        </AuthProvider>
-      </ToastProvider>
+      <ThemeProvider>
+        <ToastProvider>
+          <AuthProvider>
+            <BookingProvider>
+              <App />
+            </BookingProvider>
+          </AuthProvider>
+        </ToastProvider>
+      </ThemeProvider>
     </BrowserRouter>
   </StrictMode>
 );

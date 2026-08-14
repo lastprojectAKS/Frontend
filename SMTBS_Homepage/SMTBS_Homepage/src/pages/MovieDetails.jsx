@@ -21,7 +21,7 @@ export default function MovieDetails() {
 
   return (
     <div>
-      <section className="relative overflow-hidden">
+      <section className="theme-dark-scope relative overflow-hidden bg-bg-primary">
         <div className="absolute inset-0">
           <img src={movie.poster} alt="" aria-hidden="true" className="h-full w-full object-cover object-top opacity-30 blur-sm" />
           <div className="absolute inset-0 bg-gradient-to-t from-bg-primary via-bg-primary/85 to-bg-primary/60" />
