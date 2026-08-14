@@ -67,7 +67,9 @@ export default function Navbar() {
     <>
       <header
         className={`fixed inset-x-0 top-0 z-[80] border-b transition-colors duration-300 ${
-          solid ? "border-border bg-bg-primary/92 backdrop-blur-md" : "border-transparent bg-transparent"
+          solid
+            ? "border-border bg-bg-primary/92 backdrop-blur-md"
+            : "theme-dark-scope border-transparent bg-transparent"
         }`}
       >
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
