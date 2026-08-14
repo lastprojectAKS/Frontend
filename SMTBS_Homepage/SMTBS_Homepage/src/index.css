@@ -44,9 +44,12 @@
  * Some tokens use different values than a naive "invert the dark ones"
  * would give: on a white surface, the dark theme's --color-accent-text and
  * the semantic success/warning/error colors fall short of 4.5:1 contrast,
- * so light mode uses darker variants of those specific tokens (verified
- * against white: muted 5.28:1, secondary 7.73:1, accent-text/success/
- * warning all ~4.65-4.70:1).
+ * so light mode uses darker variants of those specific tokens. text-muted
+ * and text-secondary are also pushed well past the 4.5:1 AA minimum (to
+ * ~7.2:1 and ~10.4:1) rather than just clearing it — the bare minimum read
+ * as washed out next to dark mode's much punchier contrast. Verified
+ * against white: muted 7.16:1, secondary 10.44:1, accent-text/success/
+ * warning all ~4.65-4.70:1.
  */
 :root[data-theme="light"] {
   --color-bg-primary: #f8fafc;
@@ -55,8 +58,8 @@
   --color-surface-hover: #f4f4f6;
 
   --color-text-primary: #0f1115;
-  --color-text-secondary: #52525b;
-  --color-text-muted: #6b6b74;
+  --color-text-secondary: #3f3f46;
+  --color-text-muted: #57575f;
 
   --color-border: #e4e4e7;
   --color-border-strong: #d4d4d8;
