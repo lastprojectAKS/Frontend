@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <meta
+    name="description"
+    content="SMTBS Smart Movie Ticket Booking System homepage"
+  >
+
+  <title>SMTBS | Smart Movie Ticket Booking System</title>
+
+  <meta name="theme-color" content="#16324f" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#10151f" media="(prefers-color-scheme: dark)">
+
+  <script>
+    (function () {
+      try {
+        if (localStorage.getItem("smtbs-theme") === "dark") {
+          document.documentElement.setAttribute("data-theme", "dark");
+        }
+      } catch (e) {}
+    })();
+  </script>
+
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>%F0%9F%8E%AC</text></svg>">
+
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="SMTBS | Smart Movie Ticket Booking System">
+  <meta property="og:description" content="Find movies, compare showtimes and reserve your preferred seat in just a few simple steps.">
+  <meta property="og:image" content="images/dune-part-two.jpeg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="SMTBS | Smart Movie Ticket Booking System">
+  <meta name="twitter:description" content="Find movies, compare showtimes and reserve your preferred seat in just a few simple steps.">
+  <meta name="twitter:image" content="images/dune-part-two.jpeg">
+
+  <link
+    href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=Source+Sans+3:wght@400;600;700&display=swap"
+    rel="stylesheet"
+  >
+
+  <link rel="stylesheet" href="css/style.css">
+
+  <noscript>
+    <style>
+      .card { opacity: 1 !important; transform: none !important; }
+      .hero .slide { opacity: 1 !important; }
+      .hero .slide:not(:first-child) { display: none !important; }
+    </style>
+  </noscript>
+</head>
+
+<body>
+
+  <a class="skip-link" href="#movies">Skip to main content</a>
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="container header-inner">
+
+      <a class="logo" href="#home">
+        <span class="logo-icon">🎬</span>
+        SMTBS
+      </a>
+
+      <button
+        class="nav-toggle"
+        aria-controls="mainNav"
+        aria-expanded="false"
+        aria-label="Open menu"
+      >
+        <span class="hamburger" aria-hidden="true">
+          <span class="bar"></span>
+          <span class="bar"></span>
+          <span class="bar"></span>
+        </span>
+      </button>
+
+      <nav id="mainNav" aria-label="Main navigation">
+        <ul>
+          <li><a href="#home">Home</a></li>
+          <li><a href="#movies">Movies</a></li>
+          <li><a href="#featured">Featured</a></li>
+          <li><a href="#testimonials">Reviews</a></li>
+          <li><a href="#faq">FAQ</a></li>
+          <li><a href="#benefits">Rewards</a></li>
+        </ul>
+      </nav>
+
+      <div class="header-actions">
+        <span class="points">⭐ 240 points</span>
+        <button
+          class="theme-toggle"
+          id="themeToggle"
+          type="button"
+          aria-pressed="false"
+          aria-label="Switch to dark mode"
+        >
+          <span class="theme-icon" aria-hidden="true">🌙</span>
+        </button>
+        <button class="login-link" id="loginTrigger" type="button">Login</button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Hero (slider) -->
+  <section class="hero hero-slider" id="home" aria-roledescription="carousel">
+    <div class="hero-intro container">
+      <div class="hero-copy">
+        <p class="eyebrow">Smart Movie Ticket Booking System</p>
+        <h1>Book Your Favourite Movie Today</h1>
+        <p class="hero-description">Find movies, compare showtimes and reserve your preferred seat in just a few simple steps.</p>
+      </div>
+
+      <div class="search hero-searchbar">
+        <input type="search" id="movieSearch" placeholder="Search by movie title or genre" aria-label="Search movies">
+        <button class="btn" id="searchButton" type="button">Search</button>
+      </div>
+    </div>
+
+    <div class="hero-slides">
+      <div class="slide" data-index="0" aria-hidden="false">
+        <img src="images/dune-part-two.jpeg" alt="Dune: Part Two" width="1000" height="1482" loading="lazy" decoding="async">
+      </div>
+
+      <div class="slide" data-index="1" aria-hidden="true">
+        <img src="images/oppenheimer.jpeg" alt="Oppenheimer" width="1600" height="1200" loading="lazy" decoding="async">
+      </div>
+
+      <div class="slide" data-index="2" aria-hidden="true">
+        <img src="images/inception.jpeg" alt="Inception" width="1404" height="2048" loading="lazy" decoding="async">
+      </div>
+    </div>
+
+    <div class="hero-controls container">
+      <button class="hero-prev" aria-label="Previous slide">‹</button>
+      <div class="hero-indicators" role="tablist" aria-label="Slide indicators">
+        <button class="indicator active" data-slide="0" data-target="#card-dune-part-two" aria-selected="true" role="tab">
+          <img src="images/dune-part-two.jpeg" alt="Dune poster" width="60" height="90">
+        </button>
+        <button class="indicator" data-slide="1" data-target="#card-oppenheimer" aria-selected="false" role="tab">
+          <img src="images/oppenheimer.jpeg" alt="Oppenheimer poster" width="60" height="90">
+        </button>
+        <button class="indicator" data-slide="2" data-target="#card-inception" aria-selected="false" role="tab">
+          <img src="images/inception.jpeg" alt="Inception poster" width="60" height="90">
+        </button>
+      </div>
+      <button class="hero-next" aria-label="Next slide">›</button>
+    </div>
+  </section>
+
+  <!-- Featured Movie -->
+  <section class="featured-section" id="featured">
+    <div class="container">
+
+      <div class="section-heading">
+        <p class="section-label">Featured this week</p>
+        <h2>Featured Movie</h2>
+      </div>
+
+      <div class="featured-movie">
+
+        <div class="featured-image">
+          <img
+            src="images/dune-part-two.jpeg"
+            alt="Dune Part Two movie poster"
+            width="660"
+            height="880"
+            loading="lazy"
+            decoding="async"
+          >
+        </div>
+
+        <div class="featured-content">
+
+          <span class="featured-badge">
+            Double loyalty points
+          </span>
+
+          <h2>Dune: Part Two</h2>
+
+          <p class="featured-meta">
+            Sci-Fi · 166 minutes · PG-13
+          </p>
+
+          <div class="featured-rating">
+            ★★★★☆
+            <span>8.6 rating</span>
+          </div>
+
+          <p class="featured-description">
+            Continue the epic journey across Arrakis. Book your seat today
+            and receive double loyalty points with your ticket.
+          </p>
+
+          <div class="featured-information">
+
+            <div>
+              <span>Showtimes</span>
+              <strong>10:00 AM · 1:30 PM · 5:00 PM</strong>
+            </div>
+
+            <div>
+              <span>Ticket price</span>
+              <strong>From $12</strong>
+            </div>
+
+          </div>
+
+          <button type="button" class="btn featured-button">
+            Book Now
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Movies -->
+  <main class="container movies-section" id="movies">
+
+    <div class="movies-heading">
+
+      <div>
+        <p class="section-label">Browse movies</p>
+        <h2>Now Showing</h2>
+      </div>
+
+      <div class="filters">
+
+        <button
+          class="chip active"
+          data-genre="all"
+          type="button"
+        >
+          All
+        </button>
+
+        <button
+          class="chip"
+          data-genre="action"
+          type="button"
+        >
+          Action
+        </button>
+
+        <button
+          class="chip"
+          data-genre="drama"
+          type="button"
+        >
+          Drama
+        </button>
+
+        <button
+          class="chip"
+          data-genre="sci-fi"
+          type="button"
+        >
+          Sci-Fi
+        </button>
+
+        <button
+          class="chip"
+          data-genre="fantasy"
+          type="button"
+        >
+          Fantasy
+        </button>
+
+      </div>
+
+    </div>
+
+    <p class="no-results" id="noResults">
+      No movies were found.
+    </p>
+
+    <div class="grid">
+
+      <!-- Dune -->
+      <article
+        id="card-dune-part-two"
+        class="card"
+        data-genre="sci-fi"
+        data-title="dune part two sci-fi"
+      >
+
+        <div class="poster">
+          <span class="badge">Now showing</span>
+
+          <img
+            src="images/dune-part-two.jpeg"
+            alt="Dune Part Two movie poster"
+            width="600"
+            height="900"
+            loading="lazy"
+            decoding="async"
+          >
+        </div>
+
+        <div class="card-body">
+
+          <h3>Dune: Part Two</h3>
+
+          <p class="meta">
+            Sci-Fi · 166 min · PG-13 ·
+            <span class="rating">★ 8.6</span>
+          </p>
+
+          <div class="times">
+            <button class="time" type="button">10:00 AM</button>
+            <button class="time" type="button">1:30 PM</button>
+            <button class="time" type="button">5:00 PM</button>
+          </div>
+
+          <div class="card-foot">
+
+            <span class="price">
+              From <strong>$12</strong>
+            </span>
+
+            <button class="btn card-button" type="button">
+              Book now
+            </button>
+
+          </div>
+
+        </div>
+      </article>
+
+      <!-- Oppenheimer -->
+      <article
+        id="card-oppenheimer"
+        class="card"
+        data-genre="drama"
+        data-title="oppenheimer drama"
+      >
+
+        <div class="poster">
+          <span class="badge">Now showing</span>
+
+          <img
+            src="images/oppenheimer.jpeg"
+            alt="Oppenheimer movie poster"
+            width="600"
+            height="900"
+            loading="lazy"
+            decoding="async"
+          >
+        </div>
+
+        <div class="card-body">
+
+          <h3>Oppenheimer</h3>
+
+          <p class="meta">
+            Drama · 180 min · R ·
+            <span class="rating">★ 8.9</span>
+          </p>
+
+          <div class="times">
+            <button class="time" type="button">11:00 AM</button>
+            <button class="time" type="button">3:00 PM</button>
+            <button class="time" type="button">7:00 PM</button>
+          </div>
+
+          <div class="card-foot">
+
+            <span class="price">
+              From <strong>$12</strong>
+            </span>
+
+            <button class="btn card-button" type="button">
+              Book now
+            </button>
+
+          </div>
+
+        </div>
+      </article>
+
+      <!-- Poor Things -->
+      <article
+        class="card"
+        data-genre="fantasy"
+        data-title="poor things fantasy"
+      >
+
+        <div class="poster">
+          <span class="badge">Now showing</span>
+
+          <img
+            src="images/poor-things.jpg"
+            alt="Poor Things movie poster"
+            width="600"
+            height="900"
+            loading="lazy"
+            decoding="async"
+          >
+        </div>
+
+        <div class="card-body">
+
+          <h3>Poor Things</h3>
+
+          <p class="meta">
+            Fantasy · 141 min · R ·
+            <span class="rating">★ 8.1</span>
+          </p>
+
+          <div class="times">
+            <button class="time" type="button">12:00 PM</button>
+            <button class="time" type="button">4:30 PM</button>
+            <button class="time" type="button">8:00 PM</button>
+          </div>
+
+          <div class="card-foot">
+
+            <span class="price">
+              From <strong>$12</strong>
+            </span>
+
+            <button class="btn card-button" type="button">
+              Book now
+            </button>
+
+          </div>
+
+        </div>
+      </article>
+
+      <!-- Inception -->
+      <article
+        id="card-inception"
+        class="card"
+        data-genre="sci-fi"
+        data-title="inception sci-fi"
+      >
+
+        <div class="poster">
+          <span class="badge">Now showing</span>
+
+          <img
+            src="images/inception.jpeg"
+            alt="Inception movie poster"
+            width="600"
+            height="900"
+            loading="lazy"
+            decoding="async"
+          >
+        </div>
+
+        <div class="card-body">
+
+          <h3>Inception</h3>
+
+          <p class="meta">
+            Sci-Fi · 148 min · PG-13 ·
+            <span class="rating">★ 8.8</span>
+          </p>
+
+          <div class="times">
+            <button class="time" type="button">10:30 AM</button>
+            <button class="time" type="button">2:15 PM</button>
+            <button class="time" type="button">7:30 PM</button>
+          </div>
+
+          <div class="card-foot">
+
+            <span class="price">
+              From <strong>$12</strong>
+            </span>
+
+            <button class="btn card-button" type="button">
+              Book now
+            </button>
+
+          </div>
+
+        </div>
+      </article>
+
+      <!-- The Batman -->
+      <article
+        class="card"
+        data-genre="action"
+        data-title="the batman action"
+      >
+
+        <div class="poster">
+          <span class="badge">Now showing</span>
+
+          <img
+            src="images/the-batman.jpg"
+            alt="The Batman movie poster"
+            width="600"
+            height="900"
+            loading="lazy"
+            decoding="async"
+          >
+        </div>
+
+        <div class="card-body">
+
+          <h3>The Batman</h3>
+
+          <p class="meta">
+            Action · 176 min · PG-13 ·
+            <span class="rating">★ 7.8</span>
+          </p>
+
+          <div class="times">
+            <button class="time" type="button">11:45 AM</button>
+            <button class="time" type="button">3:45 PM</button>
+            <button class="time" type="button">9:00 PM</button>
+          </div>
+
+          <div class="card-foot">
+
+            <span class="price">
+              From <strong>$12</strong>
+            </span>
+
+            <button class="btn card-button" type="button">
+              Book now
+            </button>
+
+          </div>
+
+        </div>
+      </article>
+
+      <!-- Past Lives -->
+      <article
+        class="card"
+        data-genre="drama"
+        data-title="past lives drama"
+      >
+
+        <div class="poster">
+          <span class="badge">Now showing</span>
+
+          <img
+            src="images/past-lives.jpg"
+            alt="Past Lives movie poster"
+            width="600"
+            height="900"
+            loading="lazy"
+            decoding="async"
+          >
+        </div>
+
+        <div class="card-body">
+
+          <h3>Past Lives</h3>
+
+          <p class="meta">
+            Drama · 106 min · PG-13 ·
+            <span class="rating">★ 8.0</span>
+          </p>
+
+          <div class="times">
+            <button class="time" type="button">1:00 PM</button>
+            <button class="time" type="button">5:30 PM</button>
+            <button class="time" type="button">8:15 PM</button>
+          </div>
+
+          <div class="card-foot">
+
+            <span class="price">
+              From <strong>$12</strong>
+            </span>
+
+            <button class="btn card-button" type="button">
+              Book now
+            </button>
+
+          </div>
+
+        </div>
+      </article>
+
+    </div>
+  </main>
+
+  <!-- Benefits -->
+  <section class="benefits-section" id="benefits">
+    <div class="container">
+
+      <div class="section-heading center-heading">
+
+        <p class="section-label">
+          Simple and convenient
+        </p>
+
+        <h2>Why Choose SMTBS?</h2>
+
+        <p class="section-description">
+          A faster and easier way to find movies and reserve cinema seats.
+        </p>
+
+      </div>
+
+      <div class="benefits-grid">
+
+        <article class="benefit-card">
+          <span class="benefit-icon">🎟️</span>
+          <h3>Easy Booking</h3>
+          <p>
+            Choose your movie, time and seat in only a few steps.
+          </p>
+        </article>
+
+        <article class="benefit-card">
+          <span class="benefit-icon">💳</span>
+          <h3>Secure Payment</h3>
+          <p>
+            Complete your booking through a safe checkout process.
+          </p>
+        </article>
+
+        <article class="benefit-card">
+          <span class="benefit-icon">⭐</span>
+          <h3>Loyalty Rewards</h3>
+          <p>
+            Earn points with each booking and redeem them later.
+          </p>
+        </article>
+
+        <article class="benefit-card">
+          <span class="benefit-icon">📱</span>
+          <h3>Mobile Friendly</h3>
+          <p>
+            Book from your phone, tablet or desktop computer.
+          </p>
+        </article>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Testimonials -->
+  <section class="testimonials-section" id="testimonials">
+    <div class="container">
+
+      <div class="section-heading center-heading">
+        <p class="section-label">What people say</p>
+        <h2>Loved by moviegoers</h2>
+        <p class="section-description">
+          Real feedback from people who booked their seats with SMTBS.
+        </p>
+      </div>
+
+      <div class="testimonials-grid">
+
+        <article class="testimonial-card">
+          <div class="testimonial-rating" aria-label="5 out of 5 stars">★★★★★</div>
+          <p class="testimonial-quote">
+            "Booking tickets has never been this fast. I found my seat and
+            confirmed my booking in under a minute."
+          </p>
+          <div class="testimonial-author">
+            <span class="avatar" aria-hidden="true">JA</span>
+            <div>
+              <strong>Jamie Alvarez</strong>
+              <span>Verified booking</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="testimonial-card">
+          <div class="testimonial-rating" aria-label="5 out of 5 stars">★★★★★</div>
+          <p class="testimonial-quote">
+            "The seat map made it so easy to pick exactly where we wanted to
+            sit. No more guessing at the box office."
+          </p>
+          <div class="testimonial-author">
+            <span class="avatar" aria-hidden="true">PK</span>
+            <div>
+              <strong>Priya Kapoor</strong>
+              <span>Verified booking</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="testimonial-card">
+          <div class="testimonial-rating" aria-label="4 out of 5 stars">★★★★☆</div>
+          <p class="testimonial-quote">
+            "Loyalty points add up quickly and the interface works great on
+            my phone. My go-to for movie night now."
+          </p>
+          <div class="testimonial-author">
+            <span class="avatar" aria-hidden="true">DL</span>
+            <div>
+              <strong>Daniel Lee</strong>
+              <span>Verified booking</span>
+            </div>
+          </div>
+        </article>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="faq-section" id="faq">
+    <div class="container">
+
+      <div class="section-heading center-heading">
+        <p class="section-label">Need help?</p>
+        <h2>Frequently asked questions</h2>
+        <p class="section-description">
+          Can't find what you're looking for? The support links in the footer can point you in the right direction.
+        </p>
+      </div>
+
+      <div class="faq-list">
+
+        <details class="faq-item">
+          <summary>How do I book a ticket?</summary>
+          <p>
+            Pick a movie from Now Showing, choose a showtime, then select
+            your seats and confirm. You'll get a booking reference on
+            screen once it's done.
+          </p>
+        </details>
+
+        <details class="faq-item">
+          <summary>Can I choose my own seat?</summary>
+          <p>
+            Yes. When you book a ticket, an interactive seat map opens so
+            you can pick any available seat in the theatre.
+          </p>
+        </details>
+
+        <details class="faq-item">
+          <summary>How do loyalty points work?</summary>
+          <p>
+            You earn points on every booking, with select movies offering
+            double points. Points can be redeemed for discounts on future
+            tickets.
+          </p>
+        </details>
+
+        <details class="faq-item">
+          <summary>Can I cancel or change a booking?</summary>
+          <p>
+            Most bookings can be changed or cancelled up to two hours before
+            showtime. Refunds are credited back to your original payment
+            method.
+          </p>
+        </details>
+
+        <details class="faq-item">
+          <summary>Is my payment information secure?</summary>
+          <p>
+            Yes, all bookings go through an encrypted, secure checkout
+            process so your payment details stay protected.
+          </p>
+        </details>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer id="footer">
+
+    <div class="container footer-grid">
+
+      <div>
+        <a class="logo footer-logo" href="#home">
+          <span class="logo-icon">🎬</span>
+          SMTBS
+        </a>
+
+        <p>
+          Smart Movie Ticket Booking System for simple and convenient
+          cinema bookings.
+        </p>
+      </div>
+
+      <div>
+        <h3>Explore</h3>
+        <a href="#home">Home</a>
+        <a href="#movies">Movies</a>
+        <a href="#featured">Featured</a>
+        <a href="#testimonials">Reviews</a>
+      </div>
+
+      <div>
+        <h3>Support</h3>
+        <a href="#faq">Help Centre</a>
+        <a href="#">Contact</a>
+        <a href="#">Privacy Policy</a>
+      </div>
+
+      <div>
+        <h3>Project</h3>
+        <p>ICT307 Project 1</p>
+        <p>Smart Movie Ticket Booking System</p>
+      </div>
+
+    </div>
+
+    <div class="container footer-bottom">
+      <p>© 2026 SMTBS. All rights reserved.</p>
+    </div>
+
+  </footer>
+
+  <!-- Booking modal -->
+  <div class="modal-overlay" id="bookingModal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="bookingModalTitle">
+      <button class="modal-close" id="bookingModalClose" type="button" aria-label="Close booking dialog">✕</button>
+
+      <div class="modal-body" id="bookingView">
+        <div class="booking-movie">
+          <img id="bookingPoster" src="" alt="" width="90" height="135">
+          <div>
+            <h2 id="bookingModalTitle"></h2>
+            <p class="meta" id="bookingMeta"></p>
+          </div>
+        </div>
+
+        <div class="booking-section">
+          <h3>Select showtime</h3>
+          <div class="booking-times" id="bookingTimes"></div>
+        </div>
+
+        <div class="booking-section">
+          <div class="booking-section-heading">
+            <h3>Select seats</h3>
+            <span class="booking-hint">Up to 6 seats</span>
+          </div>
+          <p class="screen-label">Screen this way</p>
+          <div class="seat-map" id="seatMap"></div>
+          <div class="seat-legend">
+            <span><i class="seat-swatch"></i> Available</span>
+            <span><i class="seat-swatch is-selected"></i> Selected</span>
+            <span><i class="seat-swatch is-taken"></i> Taken</span>
+          </div>
+        </div>
+
+        <div class="booking-summary">
+          <div class="booking-summary-line">
+            <span>Seats selected</span>
+            <strong id="seatCount">0</strong>
+          </div>
+          <div class="booking-summary-line">
+            <span>Total</span>
+            <strong id="bookingTotal">$0</strong>
+          </div>
+          <button class="btn booking-confirm" id="confirmBooking" type="button" disabled>
+            Confirm booking
+          </button>
+        </div>
+      </div>
+
+      <div class="modal-body booking-success" id="bookingSuccess" hidden>
+        <div class="success-icon" aria-hidden="true">🎉</div>
+        <h2>Booking confirmed!</h2>
+        <p class="success-ref">Reference <strong id="bookingRef"></strong></p>
+        <dl class="success-details" id="successDetails"></dl>
+        <p class="demo-note">This is a front-end demo — no real ticket was purchased or charged.</p>
+        <button class="btn" id="closeSuccess" type="button">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Login modal -->
+  <div class="modal-overlay" id="loginModal" hidden>
+    <div class="modal modal-small" role="dialog" aria-modal="true" aria-labelledby="loginModalTitle">
+      <button class="modal-close" id="loginModalClose" type="button" aria-label="Close sign-in dialog">✕</button>
+
+      <div class="modal-body">
+        <h2 id="loginModalTitle">Sign in</h2>
+        <p class="demo-note">Demo only — no account is created or stored.</p>
+
+        <form id="loginForm" novalidate>
+          <label class="field">
+            <span>Email</span>
+            <input type="email" name="email" required placeholder="you@example.com" autocomplete="email">
+          </label>
+
+          <label class="field">
+            <span>Password</span>
+            <input type="password" name="password" required minlength="6" placeholder="••••••••" autocomplete="current-password">
+          </label>
+
+          <button class="btn login-submit" type="submit">Log in</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <button class="scroll-top" id="scrollTop" type="button" aria-label="Scroll to top" hidden>↑</button>
+
+  <script src="js/script.js"></script>
+
+</body>
+</html>
