@@ -14,7 +14,7 @@ const LINKS = [
   { to: "/offers", label: "Offers" },
 ];
 
-const CITIES = ["New York, NY", "Los Angeles, CA", "Chicago, IL", "Austin, TX"];
+const CITIES = ["Sydney, NSW", "Melbourne, VIC", "Brisbane, QLD", "Perth, WA"];
 
 export default function Navbar() {
   const location = useLocation();

@@ -112,7 +112,12 @@ export default function Footer() {
 
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-border pt-6 text-xs text-text-muted sm:flex-row">
           <p>© {new Date().getFullYear()} SMTBS. All rights reserved.</p>
-          <p>Frontend demo — no real bookings or payments are processed.</p>
+          <div className="flex items-center gap-4">
+            <p>Frontend demo — no real bookings or payments are processed.</p>
+            <Link to="/admin/login" className="font-medium text-text-muted transition-colors hover:text-text-primary">
+              Admin
+            </Link>
+          </div>
         </div>
       </div>
     </footer>
