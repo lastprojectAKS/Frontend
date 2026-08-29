@@ -65,14 +65,12 @@ export default function AdminSettings() {
 
   const [prefs, setPrefs] = useState({ pageSize: "10", dateFormat: "yyyy-mm-dd" });
 
-  function saveProfile(e) {
+  async function saveProfile(e) {
     e.preventDefault();
     setSavingProfile(true);
-    setTimeout(() => {
-      updateProfile({ name: name.trim() || admin.name });
-      setSavingProfile(false);
-      showToast("Profile updated.");
-    }, 300);
+    await updateProfile({ name: name.trim() || admin.name });
+    setSavingProfile(false);
+    showToast("Profile updated.");
   }
 
   function savePassword(e) {

@@ -1,56 +1,104 @@
 import { createContext, useContext, useState, useCallback, useEffect } from "react";
+import { supabase } from "../lib/supabaseClient";
 
 const AuthContext = createContext(null);
-const STORAGE_KEY = "smtbs-user";
 
-function loadStoredUser() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
+async function fetchProfile(userId) {
+  const { data } = await supabase.from("profiles").select("*").eq("id", userId).single();
+  return data;
 }
 
-function nameFromEmail(email) {
-  const local = email.split("@")[0] || "";
-  const words = local.replace(/[._\d]+/g, " ").trim().split(/\s+/).filter(Boolean);
-  if (words.length === 0) return "Member";
-  return words.map((w) => w[0].toUpperCase() + w.slice(1)).join(" ");
+function toUser(session, profile) {
+  if (!session || !profile) return null;
+  return {
+    id: profile.id,
+    name: profile.name,
+    email: profile.email,
+    phone: profile.phone,
+    memberSince: String(new Date(profile.member_since).getFullYear()),
+    loyaltyPoints: profile.loyalty_points,
+  };
 }
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(loadStoredUser);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [authModal, setAuthModal] = useState({ open: false, mode: "login" });
 
   useEffect(() => {
-    try {
-      if (user) localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
-      else localStorage.removeItem(STORAGE_KEY);
-    } catch {
-      /* localStorage unavailable — session just won't persist */
+    let cancelled = false;
+
+    async function syncSession(session) {
+      if (!session) {
+        if (!cancelled) setUser(null);
+        return;
+      }
+      const profile = await fetchProfile(session.user.id);
+      if (!cancelled) setUser(toUser(session, profile));
     }
-  }, [user]);
 
-  const login = useCallback(({ email }) => {
-    setUser({
-      name: nameFromEmail(email),
-      email,
-      memberSince: String(new Date().getFullYear()),
-      loyaltyPoints: 240,
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      syncSession(session).finally(() => {
+        if (!cancelled) setLoading(false);
+      });
     });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      syncSession(session);
+    });
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, []);
 
-  const signup = useCallback(({ name, email }) => {
-    setUser({
-      name: name.trim() || nameFromEmail(email),
-      email,
-      memberSince: String(new Date().getFullYear()),
-      loyaltyPoints: 0,
-    });
+  const login = useCallback(async ({ email, password }) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) return { success: false, error: error.message };
+    return { success: true };
   }, []);
 
-  const logout = useCallback(() => setUser(null), []);
+  const signup = useCallback(async ({ name, email, password, phone }) => {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { name: name.trim(), phone: phone?.trim() || null } },
+    });
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  }, []);
+
+  const logout = useCallback(async () => {
+    await supabase.auth.signOut();
+  }, []);
+
+  // Phone sign-in is a single OTP credential shared by login and signup —
+  // Supabase creates the account on first use, same as a password signup
+  // would, so there's no separate "sign up with phone" call. Not wired
+  // into the UI yet — waiting on Twilio being configured in Supabase.
+  const sendPhoneOtp = useCallback(async (phone) => {
+    const { error } = await supabase.auth.signInWithOtp({ phone });
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  }, []);
+
+  const verifyPhoneOtp = useCallback(async (phone, token) => {
+    const { error } = await supabase.auth.verifyOtp({ phone, token, type: "sms" });
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  }, []);
+
+  const loginWithGoogle = useCallback(async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.origin },
+    });
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  }, []);
 
   const openAuthModal = useCallback((mode = "login") => setAuthModal({ open: true, mode }), []);
   const closeAuthModal = useCallback(() => setAuthModal((s) => ({ ...s, open: false })), []);
@@ -58,9 +106,13 @@ export function AuthProvider({ children }) {
   const value = {
     user,
     isLoggedIn: Boolean(user),
+    loading,
     login,
     signup,
     logout,
+    sendPhoneOtp,
+    verifyPhoneOtp,
+    loginWithGoogle,
     authModal,
     openAuthModal,
     closeAuthModal,
