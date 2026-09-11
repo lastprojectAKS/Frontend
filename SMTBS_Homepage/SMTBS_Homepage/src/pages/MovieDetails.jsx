@@ -1,23 +1,56 @@
-import { useState } from "react";
-import { useParams, Link, Navigate } from "react-router-dom";
-import { Ticket, Play, Clock, Calendar, Globe, ShieldAlert } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useParams, Navigate } from "react-router-dom";
+import { Ticket, Play, Clock, Calendar, Globe, ShieldAlert, Loader2 } from "lucide-react";
 import Rating from "../components/ui/Rating";
 import Badge from "../components/ui/Badge";
 import Button from "../components/ui/Button";
 import TrailerModal from "../components/movies/TrailerModal";
-import { getMovieById } from "../data/movies";
-import { getCinemasForMovie } from "../data/cinemas";
+import { getMovie, isNowShowing } from "../services/movieService";
+import { getCinemasForMovie } from "../services/cinemaService";
 import { formatDuration, formatDate } from "../lib/format";
 
 export default function MovieDetails() {
   const { id } = useParams();
-  const movie = getMovieById(id);
   const [trailerOpen, setTrailerOpen] = useState(false);
+  const [movie, setMovie] = useState(null);
+  const [cinemas, setCinemas] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
 
-  if (!movie) return <Navigate to="/movies" replace />;
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    getMovie(id).then((movieData) => {
+      if (cancelled) return;
+      if (!movieData) {
+        setNotFound(true);
+        setLoading(false);
+        return;
+      }
+      setMovie(movieData);
+      getCinemasForMovie(movieData.id).then((cinemaData) => {
+        if (!cancelled) {
+          setCinemas(cinemaData);
+          setLoading(false);
+        }
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
-  const isComingSoon = movie.status === "coming-soon";
-  const cinemas = getCinemasForMovie(movie.id);
+  if (loading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-text-muted" aria-hidden="true" />
+      </div>
+    );
+  }
+
+  if (notFound || !movie) return <Navigate to="/movies" replace />;
+
+  const isComingSoon = !isNowShowing(movie);
 
   return (
     <div>

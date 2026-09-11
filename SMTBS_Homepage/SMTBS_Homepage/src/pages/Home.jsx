@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 import Hero from "../components/home/Hero";
 import NowShowing from "../components/home/NowShowing";
 import ComingSoon from "../components/home/ComingSoon";
@@ -8,7 +9,9 @@ import OffersPreview from "../components/home/OffersPreview";
 import WhyChooseUs from "../components/home/WhyChooseUs";
 import SearchBar from "../components/movies/SearchBar";
 import FilterBar from "../components/movies/FilterBar";
-import { nowShowingMovies, allGenres } from "../data/movies";
+import { listMovies, isNowShowing, isComingSoon } from "../services/movieService";
+import { listCinemas } from "../services/cinemaService";
+import { listOffers } from "../services/offerService";
 
 const QUICK_FILTERS = [
   { value: "all", label: "All" },
@@ -22,6 +25,29 @@ export default function Home() {
   const [status, setStatus] = useState("all");
   const [genre, setGenre] = useState("all");
 
+  const [movies, setMovies] = useState([]);
+  const [cinemas, setCinemas] = useState([]);
+  const [offers, setOffers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([listMovies(), listCinemas(), listOffers()]).then(([movieData, cinemaData, offerData]) => {
+      if (cancelled) return;
+      setMovies(movieData);
+      setCinemas(cinemaData);
+      setOffers(offerData);
+      setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const nowShowingMovies = useMemo(() => movies.filter(isNowShowing), [movies]);
+  const comingSoonMovies = useMemo(() => movies.filter(isComingSoon), [movies]);
+  const allGenres = useMemo(() => [...new Set(movies.flatMap((m) => m.genres))].sort(), [movies]);
+
   function handleSearch(e) {
     e.preventDefault();
     const params = new URLSearchParams();
@@ -29,6 +55,14 @@ export default function Home() {
     if (status !== "all") params.set("status", status);
     if (genre !== "all") params.set("genre", genre);
     navigate(`/movies?${params.toString()}`);
+  }
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-text-muted" aria-hidden="true" />
+      </div>
+    );
   }
 
   return (
@@ -54,10 +88,10 @@ export default function Home() {
         </form>
       </section>
 
-      <NowShowing />
-      <ComingSoon />
-      <CinemasPreview />
-      <OffersPreview />
+      <NowShowing movies={nowShowingMovies} />
+      <ComingSoon movies={comingSoonMovies} />
+      <CinemasPreview cinemas={cinemas} />
+      <OffersPreview offers={offers} />
       <WhyChooseUs />
     </>
   );

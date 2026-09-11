@@ -1,8 +1,7 @@
 import SectionHeader from "../ui/SectionHeader";
 import OfferCard from "../offers/OfferCard";
-import { offers } from "../../data/offers";
 
-export default function OffersPreview() {
+export default function OffersPreview({ offers }) {
   return (
     <section className="border-t border-border bg-bg-secondary">
       <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">

@@ -1,18 +1,51 @@
+import { useState, useEffect } from "react";
 import { useParams, Navigate } from "react-router-dom";
-import { MapPin, Ticket } from "lucide-react";
+import { MapPin, Ticket, Loader2 } from "lucide-react";
 import Button from "../components/ui/Button";
 import Rating from "../components/ui/Rating";
-import { getCinemaById } from "../data/cinemas";
-import { getMovieById } from "../data/movies";
+import { getCinema } from "../services/cinemaService";
+import { getMovie } from "../services/movieService";
 import { formatDuration } from "../lib/format";
 
 export default function CinemaDetails() {
   const { id } = useParams();
-  const cinema = getCinemaById(id);
+  const [cinema, setCinema] = useState(null);
+  const [nowShowing, setNowShowing] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
 
-  if (!cinema) return <Navigate to="/cinemas" replace />;
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    getCinema(id).then((cinemaData) => {
+      if (cancelled) return;
+      if (!cinemaData) {
+        setNotFound(true);
+        setLoading(false);
+        return;
+      }
+      setCinema(cinemaData);
+      Promise.all(cinemaData.movieIds.map((movieId) => getMovie(movieId))).then((movies) => {
+        if (!cancelled) {
+          setNowShowing(movies.filter(Boolean));
+          setLoading(false);
+        }
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
-  const nowShowing = cinema.movieIds.map((movieId) => getMovieById(movieId)).filter(Boolean);
+  if (loading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-text-muted" aria-hidden="true" />
+      </div>
+    );
+  }
+
+  if (notFound || !cinema) return <Navigate to="/cinemas" replace />;
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">

@@ -1,8 +1,7 @@
 import SectionHeader from "../ui/SectionHeader";
 import CinemaCard from "../cinemas/CinemaCard";
-import { cinemas } from "../../data/cinemas";
 
-export default function CinemasPreview() {
+export default function CinemasPreview({ cinemas }) {
   return (
     <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
       <SectionHeader

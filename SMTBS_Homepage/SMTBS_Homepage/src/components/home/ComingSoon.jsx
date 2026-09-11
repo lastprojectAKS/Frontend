@@ -1,8 +1,7 @@
 import SectionHeader from "../ui/SectionHeader";
 import ComingSoonCard from "../movies/ComingSoonCard";
-import { comingSoonMovies } from "../../data/movies";
 
-export default function ComingSoon() {
+export default function ComingSoon({ movies: comingSoonMovies }) {
   return (
     <section className="border-t border-border bg-bg-secondary">
       <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
