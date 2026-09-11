@@ -1,39 +1,38 @@
-import { useState } from "react";
-import { Star, Ticket, Heart, Settings as SettingsIcon, Check, LogOut, UserRound } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Star, Ticket, Heart, Settings as SettingsIcon, Check, LogOut, UserRound, Loader2 } from "lucide-react";
 import Tabs from "../components/ui/Tabs";
 import Badge from "../components/ui/Badge";
 import Button from "../components/ui/Button";
 import EmptyState from "../components/ui/EmptyState";
 import MovieGrid from "../components/movies/MovieGrid";
-import { mockBookings, mockFavourites } from "../data/bookings";
+import { mockFavourites } from "../data/bookings";
 import { getMovieById } from "../data/movies";
-import { getCinemaById } from "../data/cinemas";
-import { formatCurrency, formatDate } from "../lib/format";
+import { listMyBookings } from "../services/bookingService";
+import { formatCurrency, formatDate, formatTime } from "../lib/format";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 
+const TODAY = "2026-08-21";
+
 function BookingRow({ booking }) {
-  const movie = getMovieById(booking.movieId);
-  const cinema = getCinemaById(booking.cinemaId);
-  if (!movie || !cinema) return null;
+  if (!booking.movie || !booking.cinema) return null;
+  const isUpcoming = booking.date >= TODAY && booking.bookingStatus === "Confirmed";
 
   return (
     <div className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-4">
-        <img src={movie.poster} alt={`${movie.title} poster`} className="h-20 w-14 shrink-0 rounded-lg object-cover" />
+        <img src={booking.movie.poster} alt={`${booking.movie.title} poster`} className="h-20 w-14 shrink-0 rounded-lg object-cover" />
         <div>
-          <p className="font-semibold text-text-primary">{movie.title}</p>
-          <p className="text-xs text-text-muted">{cinema.name}</p>
+          <p className="font-semibold text-text-primary">{booking.movie.title}</p>
+          <p className="text-xs text-text-muted">{booking.cinema.name}</p>
           <p className="mt-1 text-xs text-text-secondary">
-            {formatDate(booking.date, { month: "short", day: "numeric" })} · {booking.time} · Seats{" "}
-            {booking.seats.join(", ")}
+            {formatDate(booking.date, { month: "short", day: "numeric" })} · {formatTime(booking.time)} · Seats{" "}
+            {booking.seats.slice().sort().join(", ")}
           </p>
         </div>
       </div>
       <div className="flex items-center justify-between gap-3 sm:flex-col sm:items-end">
-        <Badge tone={booking.status === "upcoming" ? "success" : "neutral"}>
-          {booking.status === "upcoming" ? "Upcoming" : "Past"}
-        </Badge>
+        <Badge tone={isUpcoming ? "success" : "neutral"}>{booking.bookingStatus === "Cancelled" ? "Cancelled" : isUpcoming ? "Upcoming" : "Past"}</Badge>
         <span className="text-sm font-semibold text-text-primary">{formatCurrency(booking.total)}</span>
       </div>
     </div>
@@ -80,6 +79,22 @@ function SettingsForm({ user }) {
 export default function Profile() {
   const { isLoggedIn, user, logout, openAuthModal } = useAuth();
   const { showToast } = useToast();
+  const [bookings, setBookings] = useState([]);
+  const [bookingsLoading, setBookingsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    let cancelled = false;
+    listMyBookings().then((data) => {
+      if (!cancelled) {
+        setBookings(data);
+        setBookingsLoading(false);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoggedIn]);
 
   function handleLogout() {
     logout();
@@ -104,38 +119,46 @@ export default function Profile() {
     );
   }
 
-  const upcoming = mockBookings.filter((b) => b.status === "upcoming");
-  const past = mockBookings.filter((b) => b.status === "past");
+  const upcoming = bookings.filter((b) => b.date >= TODAY && b.bookingStatus === "Confirmed");
+  const past = bookings.filter((b) => !(b.date >= TODAY && b.bookingStatus === "Confirmed"));
   const favouriteMovies = mockFavourites.map((id) => getMovieById(id)).filter(Boolean);
+
+  const bookingsSpinner = (
+    <div className="flex justify-center py-10">
+      <Loader2 className="h-5 w-5 animate-spin text-text-muted" aria-hidden="true" />
+    </div>
+  );
 
   const tabs = [
     {
       value: "upcoming",
       label: "Upcoming",
-      content:
-        upcoming.length > 0 ? (
-          <div className="flex flex-col gap-3">
-            {upcoming.map((booking) => (
-              <BookingRow key={booking.id} booking={booking} />
-            ))}
-          </div>
-        ) : (
-          <EmptyState icon={Ticket} title="No upcoming bookings" description="Book a movie and it'll show up here." />
-        ),
+      content: bookingsLoading ? (
+        bookingsSpinner
+      ) : upcoming.length > 0 ? (
+        <div className="flex flex-col gap-3">
+          {upcoming.map((booking) => (
+            <BookingRow key={booking.id} booking={booking} />
+          ))}
+        </div>
+      ) : (
+        <EmptyState icon={Ticket} title="No upcoming bookings" description="Book a movie and it'll show up here." />
+      ),
     },
     {
       value: "past",
       label: "Past",
-      content:
-        past.length > 0 ? (
-          <div className="flex flex-col gap-3">
-            {past.map((booking) => (
-              <BookingRow key={booking.id} booking={booking} />
-            ))}
-          </div>
-        ) : (
-          <EmptyState icon={Ticket} title="No past bookings" description="Your booking history will appear here." />
-        ),
+      content: bookingsLoading ? (
+        bookingsSpinner
+      ) : past.length > 0 ? (
+        <div className="flex flex-col gap-3">
+          {past.map((booking) => (
+            <BookingRow key={booking.id} booking={booking} />
+          ))}
+        </div>
+      ) : (
+        <EmptyState icon={Ticket} title="No past bookings" description="Your booking history will appear here." />
+      ),
     },
     {
       value: "favourites",

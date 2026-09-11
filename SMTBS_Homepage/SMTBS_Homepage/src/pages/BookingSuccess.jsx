@@ -1,14 +1,35 @@
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Navigate } from "react-router-dom";
-import { CheckCircle2, Download, Ticket, Home, QrCode } from "lucide-react";
+import { CheckCircle2, Download, Ticket, Home, QrCode, Loader2 } from "lucide-react";
 import Button from "../components/ui/Button";
 import { useBooking } from "../context/BookingContext";
-import { getMovieById } from "../data/movies";
-import { getCinemaById } from "../data/cinemas";
+import { getMovie } from "../services/movieService";
+import { getCinema } from "../services/cinemaService";
 import { formatCurrency, formatDate } from "../lib/format";
 
 export default function BookingSuccess() {
   const { confirmedBooking, clearSelection } = useBooking();
+  const [movie, setMovie] = useState(null);
+  const [cinema, setCinema] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!confirmedBooking) {
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    Promise.all([getMovie(confirmedBooking.movieId), getCinema(confirmedBooking.cinemaId)]).then(([movieData, cinemaData]) => {
+      if (!cancelled) {
+        setMovie(movieData);
+        setCinema(cinemaData);
+        setLoading(false);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [confirmedBooking]);
 
   // Safe to clear here: Checkout has already unmounted, so its
   // selection-based redirect guard can no longer fire mid-navigation.
@@ -19,8 +40,15 @@ export default function BookingSuccess() {
 
   if (!confirmedBooking) return <Navigate to="/" replace />;
 
-  const movie = getMovieById(confirmedBooking.movieId);
-  const cinema = getCinemaById(confirmedBooking.cinemaId);
+  if (loading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-text-muted" aria-hidden="true" />
+      </div>
+    );
+  }
+
+  if (!movie || !cinema) return <Navigate to="/" replace />;
 
   return (
     <div className="mx-auto max-w-lg px-4 py-16 text-center sm:px-6 lg:px-8">
@@ -60,14 +88,14 @@ export default function BookingSuccess() {
         </dl>
 
         <div className="mt-5 flex items-center justify-between gap-4 border-t border-border pt-4">
-          <span className="font-mono text-sm font-semibold text-text-primary">{confirmedBooking.ref}</span>
+          <span className="font-mono text-sm font-semibold text-text-primary">{confirmedBooking.bookingCode}</span>
           <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-bg-secondary text-text-muted">
             <QrCode className="h-7 w-7" aria-hidden="true" />
           </div>
         </div>
       </div>
 
-      <p className="mt-4 text-xs text-text-muted">This is a frontend demo — no real ticket was purchased or charged.</p>
+      <p className="mt-4 text-xs text-text-muted">This booking is saved to your account — payment itself is still simulated.</p>
 
       <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
         <Button variant="secondary" icon={Download}>

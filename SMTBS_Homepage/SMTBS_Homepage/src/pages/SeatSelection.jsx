@@ -1,30 +1,70 @@
-import { useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 import SeatMap from "../components/booking/SeatMap";
 import BookingSummary from "../components/booking/BookingSummary";
 import Button from "../components/ui/Button";
 import { useBooking } from "../context/BookingContext";
-import { getMovieById } from "../data/movies";
-import { getCinemaById } from "../data/cinemas";
-import { generateSeatMap } from "../data/seatmap";
+import { useAuth } from "../context/AuthContext";
+import { getMovie } from "../services/movieService";
+import { getCinema } from "../services/cinemaService";
+import { getSeatMap } from "../services/seatService";
 import { formatCurrency } from "../lib/format";
 
 export default function SeatSelection() {
   const navigate = useNavigate();
-  const { selection, toggleSeat, pricing } = useBooking();
-  const { movieId, cinemaId, date, time, seats } = selection;
+  const { isLoggedIn } = useAuth();
+  const { selection, toggleSeat, pricing, setSeatDetails } = useBooking();
+  const { movieId, cinemaId, date, time, showtimeId, screenId, seats } = selection;
 
-  const movie = movieId ? getMovieById(movieId) : null;
-  const cinema = cinemaId ? getCinemaById(cinemaId) : null;
+  const [movie, setMovie] = useState(null);
+  const [cinema, setCinema] = useState(null);
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const rows = useMemo(() => {
-    if (!movieId || !cinemaId || !date || !time) return [];
-    return generateSeatMap(`${movieId}-${cinemaId}-${date}-${time}`);
-  }, [movieId, cinemaId, date, time]);
+  const hasSelection = Boolean(movieId && cinemaId && date && time && showtimeId && screenId);
 
-  if (!movie || !cinema || !date || !time) {
+  useEffect(() => {
+    if (!hasSelection) {
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    Promise.all([getMovie(movieId), getCinema(cinemaId), getSeatMap(showtimeId, screenId)]).then(([movieData, cinemaData, seatRows]) => {
+      if (cancelled) return;
+      setMovie(movieData);
+      setCinema(cinemaData);
+      setRows(seatRows);
+
+      const details = {};
+      seatRows.forEach((row) => {
+        row.seats.forEach((seat) => {
+          details[seat.id] = { category: seat.category, price: seat.price };
+        });
+      });
+      setSeatDetails(details);
+      setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasSelection, movieId, cinemaId, showtimeId, screenId]);
+
+  if (!isLoggedIn || !hasSelection) {
     return <Navigate to="/booking" replace />;
   }
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-text-muted" aria-hidden="true" />
+      </div>
+    );
+  }
+
+  if (!movie || !cinema) return <Navigate to="/booking" replace />;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 pb-32 sm:px-6 lg:px-8 lg:pb-12">

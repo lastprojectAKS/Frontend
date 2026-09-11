@@ -1,37 +1,46 @@
 import { createContext, useContext, useMemo, useState, useCallback } from "react";
-import { TICKET_PRICE, VIP_TICKET_PRICE, BOOKING_FEE } from "../data/showtimes";
-import { isVipSeat } from "../data/seatmap";
+import { BOOKING_FEE } from "../data/showtimes";
 
 const BookingContext = createContext(null);
-
-export { isVipSeat };
 
 const initialSelection = {
   movieId: null,
   cinemaId: null,
   date: null,
   time: null,
+  showtimeId: null,
+  screenId: null,
   seats: [],
 };
 
 export function BookingProvider({ children }) {
   const [selection, setSelection] = useState(initialSelection);
+  // Real per-seat category/price, populated once the seat map loads —
+  // pricing below is derived from this instead of a flat rate, since real
+  // seats now vary in price by screen and category.
+  const [seatDetails, setSeatDetails] = useState({});
   const [confirmedBooking, setConfirmedBooking] = useState(null);
 
   const setMovie = useCallback((movieId) => {
-    setSelection((prev) => ({ ...initialSelection, movieId }));
+    setSelection(() => ({ ...initialSelection, movieId }));
+    setSeatDetails({});
   }, []);
 
   const setCinema = useCallback((cinemaId) => {
-    setSelection((prev) => ({ ...prev, cinemaId, date: null, time: null, seats: [] }));
+    setSelection((prev) => ({ ...prev, cinemaId, date: null, time: null, showtimeId: null, screenId: null, seats: [] }));
+    setSeatDetails({});
   }, []);
 
   const setDate = useCallback((date) => {
-    setSelection((prev) => ({ ...prev, date, time: null, seats: [] }));
+    setSelection((prev) => ({ ...prev, date, time: null, showtimeId: null, screenId: null, seats: [] }));
+    setSeatDetails({});
   }, []);
 
-  const setTime = useCallback((time) => {
-    setSelection((prev) => ({ ...prev, time, seats: [] }));
+  // Time selection now also carries the real showtime/screen id — needed
+  // to fetch the real seat map and to call book_seats() at checkout.
+  const setTime = useCallback((time, showtimeId, screenId) => {
+    setSelection((prev) => ({ ...prev, time, showtimeId, screenId, seats: [] }));
+    setSeatDetails({});
   }, []);
 
   const toggleSeat = useCallback((seatId) => {
@@ -47,32 +56,27 @@ export function BookingProvider({ children }) {
 
   const clearSelection = useCallback(() => {
     setSelection(initialSelection);
+    setSeatDetails({});
   }, []);
 
-  const confirmBooking = useCallback((extra = {}) => {
-    setConfirmedBooking((prev) => {
-      const ref = `SMTBS-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
-      return { ...extra, ref };
-    });
+  const confirmBooking = useCallback((booking) => {
+    setConfirmedBooking(booking);
   }, []);
 
   const pricing = useMemo(() => {
-    const vipCount = selection.seats.filter(isVipSeat).length;
-    const standardCount = selection.seats.length - vipCount;
-    const vipSubtotal = vipCount * VIP_TICKET_PRICE;
-    const standardSubtotal = standardCount * TICKET_PRICE;
-    const subtotal = vipSubtotal + standardSubtotal;
+    const byCategory = {};
+    let subtotal = 0;
+    selection.seats.forEach((seatId) => {
+      const detail = seatDetails[seatId];
+      if (!detail) return;
+      if (!byCategory[detail.category]) byCategory[detail.category] = { count: 0, subtotal: 0 };
+      byCategory[detail.category].count += 1;
+      byCategory[detail.category].subtotal += detail.price;
+      subtotal += detail.price;
+    });
     const fee = selection.seats.length > 0 ? BOOKING_FEE : 0;
-    return {
-      vipCount,
-      standardCount,
-      vipSubtotal,
-      standardSubtotal,
-      subtotal,
-      fee,
-      total: subtotal + fee,
-    };
-  }, [selection.seats]);
+    return { byCategory, subtotal, fee, total: subtotal + fee };
+  }, [selection.seats, seatDetails]);
 
   const value = useMemo(
     () => ({
@@ -83,11 +87,13 @@ export function BookingProvider({ children }) {
       setTime,
       toggleSeat,
       clearSelection,
+      seatDetails,
+      setSeatDetails,
       pricing,
       confirmedBooking,
       confirmBooking,
     }),
-    [selection, setMovie, setCinema, setDate, setTime, toggleSeat, clearSelection, pricing, confirmedBooking, confirmBooking]
+    [selection, setMovie, setCinema, setDate, setTime, toggleSeat, clearSelection, seatDetails, pricing, confirmedBooking, confirmBooking]
   );
 
   return <BookingContext.Provider value={value}>{children}</BookingContext.Provider>;

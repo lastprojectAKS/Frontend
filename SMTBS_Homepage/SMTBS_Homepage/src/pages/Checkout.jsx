@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
-import { CreditCard, Apple, Wallet, Lock } from "lucide-react";
+import { CreditCard, Apple, Wallet, Lock, AlertCircle, Loader2 } from "lucide-react";
 import BookingSummary from "../components/booking/BookingSummary";
 import { useBooking } from "../context/BookingContext";
-import { getMovieById } from "../data/movies";
-import { getCinemaById } from "../data/cinemas";
+import { useAuth } from "../context/AuthContext";
+import { getMovie } from "../services/movieService";
+import { getCinema } from "../services/cinemaService";
+import { bookSeats } from "../services/bookingService";
 
 const PAYMENT_METHODS = [
   { id: "card", label: "Card", icon: CreditCard },
@@ -14,35 +16,76 @@ const PAYMENT_METHODS = [
 
 export default function Checkout() {
   const navigate = useNavigate();
+  const { isLoggedIn } = useAuth();
   const { selection, pricing, confirmBooking } = useBooking();
-  const { movieId, cinemaId, date, time, seats } = selection;
+  const { movieId, cinemaId, date, time, showtimeId, seats } = selection;
 
+  const [movie, setMovie] = useState(null);
+  const [cinema, setCinema] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [paymentMethod, setPaymentMethod] = useState("card");
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
-  const movie = movieId ? getMovieById(movieId) : null;
-  const cinema = cinemaId ? getCinemaById(cinemaId) : null;
+  const hasSelection = Boolean(movieId && cinemaId && date && time && showtimeId && seats.length > 0);
 
-  if (!movie || !cinema || !date || !time || seats.length === 0) {
+  useEffect(() => {
+    if (!hasSelection) {
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    Promise.all([getMovie(movieId), getCinema(cinemaId)]).then(([movieData, cinemaData]) => {
+      if (!cancelled) {
+        setMovie(movieData);
+        setCinema(cinemaData);
+        setLoading(false);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasSelection, movieId, cinemaId]);
+
+  if (!isLoggedIn || !hasSelection) {
     return <Navigate to="/booking" replace />;
   }
 
-  function handleSubmit(e) {
+  if (loading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-text-muted" aria-hidden="true" />
+      </div>
+    );
+  }
+
+  if (!movie || !cinema) return <Navigate to="/booking" replace />;
+
+  async function handleSubmit(e) {
     e.preventDefault();
     setSubmitting(true);
+    setError("");
 
-    // Simulated processing delay — no real payment is made.
-    setTimeout(() => {
+    try {
+      const booking = await bookSeats(showtimeId, seats);
       confirmBooking({
+        bookingCode: booking.booking_code,
         movieId: movie.id,
         cinemaId: cinema.id,
         date,
         time,
         seats,
-        total: pricing.total,
+        total: booking.amount,
       });
       navigate("/booking/success");
-    }, 700);
+    } catch (err) {
+      // The most likely real failure here: someone else booked one of these
+      // seats between selection and now (no seat hold exists). Send them
+      // back to pick different seats rather than retrying blindly.
+      setError(err.message || "Something went wrong. Please try again.");
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -54,6 +97,22 @@ export default function Checkout() {
 
       <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-10 lg:grid-cols-[1fr_360px]">
         <div className="flex flex-col gap-8">
+          {error && (
+            <div className="flex items-start gap-2 rounded-xl border border-error/30 bg-error/10 px-4 py-3 text-sm text-error">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              <div>
+                <p>{error}</p>
+                <button
+                  type="button"
+                  onClick={() => navigate("/booking/seats")}
+                  className="mt-1 font-semibold underline underline-offset-2"
+                >
+                  Choose different seats
+                </button>
+              </div>
+            </div>
+          )}
+
           <section className="rounded-2xl border border-border bg-surface p-6">
             <h2 className="mb-4 text-lg font-bold text-text-primary">Contact Information</h2>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -149,7 +208,7 @@ export default function Checkout() {
 
             <p className="mt-4 flex items-center gap-1.5 text-xs text-text-muted">
               <Lock className="h-3.5 w-3.5" aria-hidden="true" />
-              This is a demo checkout. No real payment is processed or stored.
+              This is a demo checkout — payment isn't real, but the booking and seats are.
             </p>
           </section>
         </div>

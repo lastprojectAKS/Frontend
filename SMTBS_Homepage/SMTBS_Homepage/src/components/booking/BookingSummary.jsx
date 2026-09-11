@@ -46,18 +46,14 @@ export default function BookingSummary({
       </dl>
 
       <div className="flex flex-col gap-2 border-t border-border pt-4 text-sm">
-        {pricing.standardCount > 0 && (
-          <div className="flex justify-between text-text-secondary">
-            <span>Standard × {pricing.standardCount}</span>
-            <span>{formatCurrency(pricing.standardSubtotal)}</span>
+        {Object.entries(pricing.byCategory).map(([category, { count, subtotal }]) => (
+          <div key={category} className="flex justify-between text-text-secondary">
+            <span>
+              {category} × {count}
+            </span>
+            <span>{formatCurrency(subtotal)}</span>
           </div>
-        )}
-        {pricing.vipCount > 0 && (
-          <div className="flex justify-between text-text-secondary">
-            <span>VIP × {pricing.vipCount}</span>
-            <span>{formatCurrency(pricing.vipSubtotal)}</span>
-          </div>
-        )}
+        ))}
         <div className="flex justify-between text-text-secondary">
           <span>Booking fee</span>
           <span>{formatCurrency(pricing.fee)}</span>
