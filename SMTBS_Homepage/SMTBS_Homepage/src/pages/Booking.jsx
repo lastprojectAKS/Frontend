@@ -1,52 +1,146 @@
-import { useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate, Navigate } from "react-router-dom";
-import { CalendarX, MapPin } from "lucide-react";
+import { CalendarX, MapPin, Loader2, UserRound } from "lucide-react";
 import Button from "../components/ui/Button";
 import Rating from "../components/ui/Rating";
 import EmptyState from "../components/ui/EmptyState";
 import { useBooking } from "../context/BookingContext";
-import { getMovieById } from "../data/movies";
-import { getCinemasForMovie } from "../data/cinemas";
-import { getDateOptions, getShowtimes } from "../data/showtimes";
+import { useAuth } from "../context/AuthContext";
+import { getMovie } from "../services/movieService";
+import { getCinemasForMovie } from "../services/cinemaService";
+import { getShowtimeDates, getShowtimesForDate } from "../services/showtimeService";
 import { formatDuration } from "../lib/format";
 
 export default function Booking() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { isLoggedIn, openAuthModal } = useAuth();
   const { selection, setMovie, setCinema, setDate, setTime } = useBooking();
 
   const queryMovieId = searchParams.get("movie");
   const queryCinemaId = searchParams.get("cinema");
 
+  const [movie, setMovieData] = useState(null);
+  const [movieLoading, setMovieLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+  const [cinemas, setCinemas] = useState([]);
+  const [dateOptions, setDateOptions] = useState([]);
+  const [datesLoading, setDatesLoading] = useState(false);
+  const [showtimes, setShowtimes] = useState([]);
+  const [showtimesLoading, setShowtimesLoading] = useState(false);
+
+  const movieId = selection.movieId || queryMovieId;
+
   useEffect(() => {
-    if (queryMovieId && queryMovieId !== selection.movieId) {
-      setMovie(queryMovieId);
-    }
+    if (queryMovieId && queryMovieId !== selection.movieId) setMovie(queryMovieId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryMovieId]);
 
   useEffect(() => {
-    if (queryCinemaId && selection.movieId === queryMovieId) {
-      setCinema(queryCinemaId);
-    }
+    if (queryCinemaId && selection.movieId === queryMovieId) setCinema(queryCinemaId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryCinemaId, selection.movieId]);
 
-  const movieId = selection.movieId || queryMovieId;
-  const movie = movieId ? getMovieById(movieId) : null;
+  // Load the movie, then the cinemas showing it.
+  useEffect(() => {
+    if (!movieId) {
+      setMovieLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setMovieLoading(true);
+    getMovie(movieId).then((movieData) => {
+      if (cancelled) return;
+      if (!movieData) {
+        setNotFound(true);
+        setMovieLoading(false);
+        return;
+      }
+      setMovieData(movieData);
+      getCinemasForMovie(movieData.id).then((cinemaData) => {
+        if (!cancelled) {
+          setCinemas(cinemaData);
+          setMovieLoading(false);
+        }
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [movieId]);
 
-  const cinemas = useMemo(() => (movie ? getCinemasForMovie(movie.id) : []), [movie]);
-  const dateOptions = useMemo(() => getDateOptions(), []);
+  // Once a cinema is chosen, load the real dates that actually have showtimes.
+  useEffect(() => {
+    if (!movie || !selection.cinemaId) {
+      setDateOptions([]);
+      return;
+    }
+    let cancelled = false;
+    setDatesLoading(true);
+    getShowtimeDates(movie.id, selection.cinemaId).then((dates) => {
+      if (!cancelled) {
+        setDateOptions(dates);
+        setDatesLoading(false);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [movie, selection.cinemaId]);
 
-  const showtimes = useMemo(() => {
-    if (!selection.cinemaId || !selection.date) return [];
-    return getShowtimes(movie?.id, selection.cinemaId, selection.date);
-  }, [movie?.id, selection.cinemaId, selection.date]);
+  // Once a date is chosen, load the real showtimes for it.
+  useEffect(() => {
+    if (!movie || !selection.cinemaId || !selection.date) {
+      setShowtimes([]);
+      return;
+    }
+    let cancelled = false;
+    setShowtimesLoading(true);
+    getShowtimesForDate(movie.id, selection.cinemaId, selection.date).then((data) => {
+      if (!cancelled) {
+        setShowtimes(data);
+        setShowtimesLoading(false);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [movie, selection.cinemaId, selection.date]);
 
   const hasAvailableShowtime = showtimes.some((s) => s.status !== "sold-out");
   const canContinue = Boolean(selection.movieId && selection.cinemaId && selection.date && selection.time);
 
-  if (!movie) return <Navigate to="/movies" replace />;
+  if (movieLoading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-text-muted" aria-hidden="true" />
+      </div>
+    );
+  }
+
+  if (notFound || !movie) return <Navigate to="/movies" replace />;
+
+  // Booking requires an account — there's no guest checkout, since a real
+  // booking needs a real customer_id to attach to.
+  if (!isLoggedIn) {
+    return (
+      <div className="mx-auto flex min-h-[60vh] max-w-md flex-col items-center justify-center gap-4 px-4 text-center">
+        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-surface text-text-muted">
+          <UserRound className="h-6 w-6" aria-hidden="true" />
+        </div>
+        <h1 className="text-2xl font-bold text-text-primary">Sign in to book tickets</h1>
+        <p className="text-text-secondary">
+          Create a free account or log in to book seats for {movie.title}.
+        </p>
+        <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
+          <Button onClick={() => openAuthModal("login")}>Log In</Button>
+          <Button variant="secondary" onClick={() => openAuthModal("signup")}>
+            Sign Up
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
@@ -93,33 +187,41 @@ export default function Booking() {
       {selection.cinemaId && (
         <section className="mb-8">
           <h2 className="mb-4 text-lg font-bold text-text-primary">2. Select Date</h2>
-          <div className="no-scrollbar flex gap-2 overflow-x-auto">
-            {dateOptions.map((option) => {
-              const active = selection.date === option.iso;
-              return (
-                <button
-                  key={option.iso}
-                  type="button"
-                  onClick={() => setDate(option.iso)}
-                  aria-pressed={active}
-                  className={`flex w-16 shrink-0 flex-col items-center gap-0.5 rounded-xl border py-3 transition-colors ${
-                    active ? "border-accent bg-accent/10 text-accent-text" : "border-border bg-surface text-text-secondary hover:border-border-strong"
-                  }`}
-                >
-                  <span className="text-xs font-medium uppercase">{option.label}</span>
-                  <span className="text-lg font-bold">{option.dayNumber}</span>
-                  <span className="text-[10px] uppercase text-text-muted">{option.month}</span>
-                </button>
-              );
-            })}
-          </div>
+          {datesLoading ? (
+            <Loader2 className="h-5 w-5 animate-spin text-text-muted" aria-hidden="true" />
+          ) : dateOptions.length === 0 ? (
+            <p className="text-sm text-text-secondary">No upcoming showtimes at this cinema for this movie.</p>
+          ) : (
+            <div className="no-scrollbar flex gap-2 overflow-x-auto">
+              {dateOptions.map((option) => {
+                const active = selection.date === option.iso;
+                return (
+                  <button
+                    key={option.iso}
+                    type="button"
+                    onClick={() => setDate(option.iso)}
+                    aria-pressed={active}
+                    className={`flex w-16 shrink-0 flex-col items-center gap-0.5 rounded-xl border py-3 transition-colors ${
+                      active ? "border-accent bg-accent/10 text-accent-text" : "border-border bg-surface text-text-secondary hover:border-border-strong"
+                    }`}
+                  >
+                    <span className="text-xs font-medium uppercase">{option.label}</span>
+                    <span className="text-lg font-bold">{option.dayNumber}</span>
+                    <span className="text-[10px] uppercase text-text-muted">{option.month}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </section>
       )}
 
       {selection.date && (
         <section className="mb-8">
           <h2 className="mb-4 text-lg font-bold text-text-primary">3. Select Showtime</h2>
-          {!hasAvailableShowtime ? (
+          {showtimesLoading ? (
+            <Loader2 className="h-5 w-5 animate-spin text-text-muted" aria-hidden="true" />
+          ) : !hasAvailableShowtime ? (
             <EmptyState
               icon={CalendarX}
               title="No showtimes available"
@@ -128,14 +230,14 @@ export default function Booking() {
           ) : (
             <div className="flex flex-wrap gap-2">
               {showtimes.map((show) => {
-                const active = selection.time === show.time;
+                const active = selection.showtimeId === show.id;
                 const soldOut = show.status === "sold-out";
                 return (
                   <button
-                    key={show.time}
+                    key={show.id}
                     type="button"
                     disabled={soldOut}
-                    onClick={() => setTime(show.time)}
+                    onClick={() => setTime(show.time, show.id, show.screenId)}
                     aria-pressed={active}
                     className={`flex flex-col items-center gap-0.5 rounded-xl border px-4 py-2.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
                       active ? "border-accent bg-accent text-white" : "border-border bg-surface text-text-primary hover:border-border-strong"
