@@ -99,8 +99,8 @@ export default function AdminMovies() {
     }
   }
 
-  function requestDelete(movie) {
-    const { allowed, reason } = canDeleteMovie(movie.id);
+  async function requestDelete(movie) {
+    const { allowed, reason } = await canDeleteMovie(movie.id);
     setDeleteTarget({ movie, allowed, reason });
   }
 

@@ -1,10 +1,17 @@
 // Central place for the platform's operational rules. Pages call these
 // instead of re-implementing checks inline, so the rule lives in exactly
 // one place and every screen enforces it the same way.
+//
+// Mid-migration state: canDeleteMovie() below checks the real `bookings`
+// table (Movies is migrated — see admin/services/movieService.js) and is
+// therefore async, while every other rule here still reads admin's mock
+// data (Showtimes/Bookings/Cinemas haven't migrated yet) and stays sync.
+// That split resolves itself as each resource migrates in turn.
 
 import { showtimes } from "../data/showtimes";
 import { bookings } from "../data/bookings";
 import { getScreenCapacity } from "../data/screens";
+import { supabase } from "../../lib/supabaseClient";
 
 function toMinutes(time) {
   const [h, m] = time.split(":").map(Number);
@@ -47,8 +54,15 @@ export function canDeleteShowtime(showtimeId) {
   return { allowed: !hasBookings, reason: hasBookings ? "This showtime has existing bookings and can only be cancelled, not deleted." : null };
 }
 
-export function canDeleteMovie(movieId) {
-  const hasBookings = bookings.some((b) => b.movieId === movieId && b.bookingStatus !== "Cancelled");
+export async function canDeleteMovie(movieId) {
+  const { count, error } = await supabase
+    .from("bookings")
+    .select("id", { count: "exact", head: true })
+    .eq("movie_id", movieId)
+    .neq("booking_status", "Cancelled");
+  if (error) throw error;
+
+  const hasBookings = (count ?? 0) > 0;
   return {
     allowed: !hasBookings,
     reason: hasBookings

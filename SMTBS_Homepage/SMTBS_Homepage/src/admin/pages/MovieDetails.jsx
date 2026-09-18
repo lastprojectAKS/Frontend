@@ -70,8 +70,8 @@ export default function AdminMovieDetails() {
     await refresh();
   }
 
-  function requestDelete() {
-    const { allowed, reason } = canDeleteMovie(id);
+  async function requestDelete() {
+    const { allowed, reason } = await canDeleteMovie(id);
     setDeleteState({ allowed, reason });
   }
 
@@ -170,7 +170,8 @@ export default function AdminMovieDetails() {
 
           {movie.cast?.length > 0 && (
             <p className="mt-3 text-sm text-text-secondary">
-              <span className="text-text-muted">Cast</span> {movie.cast.join(", ")}
+              <span className="text-text-muted">Cast</span>{" "}
+              {movie.cast.map((c) => (c.role ? `${c.name} as ${c.role}` : c.name)).join(", ")}
             </p>
           )}
 
