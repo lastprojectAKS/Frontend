@@ -1,0 +1,39 @@
+Issue Type,Epic Name,Epic Link,Summary,Description,Status,Sprint,Priority
+Epic,Customer Booking Experience,,Customer Booking Experience,"Everything a customer touches to find a movie and complete a booking, from browsing through checkout confirmation.",Done,,High
+Epic,Admin Operations Portal,,Admin Operations Portal,"A separate admin application covering catalogue management, scheduling, bookings, customers, and reporting.",Done,,High
+Epic,Authentication and Backend,,Authentication and Backend,"Real accounts and sessions via Supabase (Postgres + Auth), replacing placeholder localStorage-based login on both apps.",Done,,High
+Epic,UI/UX and Design System,,UI/UX and Design System,"Shared design tokens, theming, responsive layout, and reusable components used across both applications.",Done,,Medium
+Epic,Business Logic and Quality Assurance,,Business Logic and Quality Assurance,"Domain rules (scheduling conflicts, capacity limits, revenue calculation) and the testing that verified them.",Done,,High
+Story,,Customer Booking Experience,Build Home page with hero and featured movies,"Landing page introducing the platform and surfacing now-showing titles.",Done,Sprint 1,Medium
+Story,,Customer Booking Experience,Build Movies listing with search and filters,"Browse all movies with genre and status (Now Showing / Coming Soon) filtering.",Done,Sprint 1,Medium
+Story,,Customer Booking Experience,Build Movie Details page,"Full movie info, cast, and available cinemas for a selected title.",Done,Sprint 1,Medium
+Story,,Customer Booking Experience,Build Cinemas and Cinema Details pages,"Browse cinema locations and see what is showing at each one.",Done,Sprint 1,Medium
+Story,,Customer Booking Experience,Build four-step booking flow,"Cinema and showtime selection, seat selection, checkout, and confirmation, with shared state across all four steps.",Done,Sprint 1,High
+Story,,Customer Booking Experience,Build interactive seat selection with live pricing,"Standard and VIP seat categories with a running price total as seats are selected.",Done,Sprint 1,High
+Story,,Customer Booking Experience,Build account Profile page,"Booking history, favourites, and loyalty status for the signed-in customer.",Done,Sprint 1,Medium
+Story,,Admin Operations Portal,Build admin Dashboard,"Live revenue and booking statistics, charts, and recent activity for admin staff.",Done,Sprint 2,High
+Story,,Admin Operations Portal,Build Movie Management module,"Full CRUD for the movie catalogue with a five-stage lifecycle (Draft to Inactive).",Done,Sprint 2,High
+Story,,Admin Operations Portal,Build Cinema and Screen Management module,"Manage cinema locations, screens, and per-screen seat categories.",Done,Sprint 2,High
+Story,,Admin Operations Portal,Build Showtime Management module,"Schedule showtimes across screens with validation against the catalogue and cinema status.",Done,Sprint 2,High
+Story,,Admin Operations Portal,Build Booking Management module,"Search, filter, and manage customer bookings, including guarded cancel and refund actions.",Done,Sprint 2,Medium
+Story,,Admin Operations Portal,Build Customer Management module,"View customer profiles, spend, and booking history from the admin side.",Done,Sprint 2,Medium
+Story,,Admin Operations Portal,Build Reports and Analytics module,"Date-ranged revenue, booking, and occupancy reporting.",Done,Sprint 2,Medium
+Story,,Admin Operations Portal,Build admin Settings pages,"Profile, security, notification, and preference settings for admin users.",Done,Sprint 2,Low
+Story,,Authentication and Backend,Set up Supabase project and profiles schema,"Postgres profiles table extending Supabase Auth users, with a role column for access control.",Done,Sprint 2,High
+Story,,Authentication and Backend,Implement Row-Level Security policies,"Database-level rules controlling who can read or write each row, enforced independently of the UI.",Done,Sprint 2,High
+Story,,Authentication and Backend,Implement real email/password authentication,"Replaces the previous mock login with real Supabase sign-up and sign-in for customers and admins.",Done,Sprint 2,High
+Story,,Authentication and Backend,Implement Google OAuth sign-in,"Google sign-in wired end to end on both the customer site and the admin portal.",Done,Sprint 2,Medium
+Story,,Authentication and Backend,Implement role-gated admin login,"Non-staff accounts are cleanly rejected from the admin portal rather than silently failing.",Done,Sprint 2,High
+Story,,UI/UX and Design System,Establish shared design token system,"Colour, spacing, and typography tokens shared between the customer and admin applications.",Done,Sprint 1,Medium
+Story,,UI/UX and Design System,Implement light and dark theme support,"Full theme toggle with persisted preference across both applications.",Done,Sprint 1,Medium
+Story,,UI/UX and Design System,Build shared component library,"Reusable DataTable, StatusBadge, ConfirmDialog, and form components used across every admin module.",Done,Sprint 2,Medium
+Story,,UI/UX and Design System,Verify responsive layout across breakpoints,"Confirmed usability from mobile through desktop on both applications.",Done,Sprint 2,Low
+Story,,Business Logic and Quality Assurance,Implement showtime conflict detection,"Prevents overlapping showtimes on the same screen using interval comparison, with a clear warning shown to the admin.",Done,Sprint 2,High
+Story,,Business Logic and Quality Assurance,Implement revenue and occupancy calculation rules,"Revenue counted only from paid and confirmed bookings; occupancy derived consistently across dashboard and reports.",Done,Sprint 2,Medium
+Task,,Business Logic and Quality Assurance,Fix timezone-dependent date bug in analytics,"Rewrote date utilities to use UTC-anchored math after a one-day date shift was found during testing.",Done,Sprint 2,High
+Task,,Business Logic and Quality Assurance,Fix Google OAuth token exchange failure,"Resolved a Client Secret mismatch between Google Cloud Console and Supabase that was blocking sign-in.",Done,Sprint 2,Medium
+Task,,Business Logic and Quality Assurance,Fix privileged-column trigger blocking admin dashboard edits,"Scoped a role-protection trigger so it no longer blocks legitimate direct database access.",Done,Sprint 2,Medium
+Story,,Admin Operations Portal,Migrate catalogue and booking data to live Supabase tables,"Move movies, cinemas, showtimes, and bookings off the mock data layer onto real database tables.",To Do,,High
+Story,,Authentication and Backend,Enable phone number sign-in via SMS,"Wire up the already-implemented phone OTP flow once a paid SMS provider is connected.",To Do,,Low
+Story,,Admin Operations Portal,Build CSV bulk import for movies,"Let admins upload a CSV to create many movie records at once, with validation before commit.",To Do,,Medium
+Task,,Business Logic and Quality Assurance,Introduce feature-branch workflow with pull request review,"Move from trunk-based commits to branches and reviewed PRs ahead of the next iteration.",To Do,,Medium

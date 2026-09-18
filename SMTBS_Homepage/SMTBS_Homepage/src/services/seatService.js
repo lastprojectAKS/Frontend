@@ -38,6 +38,7 @@ export async function getSeatMap(showtimeId, screenId) {
   const layout = buildSeatLayout(categories);
   const taken = new Set(takenRows.map((r) => r.seat_label));
   const basePrice = showtimeRow.price;
+  const lastRow = layout[layout.length - 1]?.row;
 
   return layout.map((rowInfo) => ({
     row: rowInfo.row,
@@ -50,9 +51,10 @@ export async function getSeatMap(showtimeId, screenId) {
         number: i + 1,
         occupied: taken.has(id),
         vip: rowInfo.category === "VIP",
-        // Aisle seat per row, kept as a simple real-ish convention now that
-        // there's no hardcoded ACCESSIBLE_SEATS list to draw from.
-        accessible: i === 0,
+        // Real venues designate a couple of wheelchair-accessible seats,
+        // not one per row — the back row has the clearest sightline and
+        // easiest access, so the first two seats there are marked instead.
+        accessible: rowInfo.row === lastRow && i < 2,
         category: rowInfo.category,
         price: Math.round(basePrice * rowInfo.priceMultiplier * 100) / 100,
       };
