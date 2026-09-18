@@ -20,6 +20,13 @@ function dayOption(dateStr) {
   };
 }
 
+// `show_date` is a plain date column (no timezone) and dayOption() above
+// already anchors it at UTC midnight for display, so "today" is computed
+// the same way here for consistency.
+function todayIso() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 export async function getShowtimeDates(movieId, cinemaId) {
   const { data, error } = await supabase
     .from("showtimes")
@@ -27,6 +34,7 @@ export async function getShowtimeDates(movieId, cinemaId) {
     .eq("movie_id", movieId)
     .eq("cinema_id", cinemaId)
     .eq("status", "Scheduled")
+    .gte("show_date", todayIso())
     .order("show_date");
   if (error) throw error;
   return [...new Set(data.map((row) => row.show_date))].map(dayOption);
@@ -43,13 +51,21 @@ export async function getShowtimesForDate(movieId, cinemaId, date) {
     .order("start_time");
   if (error) throw error;
 
-  return data.map((row) => {
-    const occupancy = row.total_seats > 0 ? row.booked_seats / row.total_seats : 0;
-    return {
-      id: row.id,
-      screenId: row.screen_id,
-      time: formatTime12h(row.start_time.slice(0, 5)),
-      status: occupancy >= 1 ? "sold-out" : occupancy >= 0.75 ? "few-seats" : "available",
-    };
-  });
+  // For today, drop slots that have already started — a "10:00 AM" showing
+  // shouldn't still be bookable at 3 PM. Every other date is unaffected.
+  const now = new Date();
+  const isToday = date === todayIso();
+  const nowHms = now.toISOString().slice(11, 19);
+
+  return data
+    .filter((row) => !isToday || row.start_time > nowHms)
+    .map((row) => {
+      const occupancy = row.total_seats > 0 ? row.booked_seats / row.total_seats : 0;
+      return {
+        id: row.id,
+        screenId: row.screen_id,
+        time: formatTime12h(row.start_time.slice(0, 5)),
+        status: occupancy >= 1 ? "sold-out" : occupancy >= 0.75 ? "few-seats" : "available",
+      };
+    });
 }

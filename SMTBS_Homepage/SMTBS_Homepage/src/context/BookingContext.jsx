@@ -1,5 +1,5 @@
 import { createContext, useContext, useMemo, useState, useCallback } from "react";
-import { BOOKING_FEE } from "../data/showtimes";
+import { BOOKING_FEE } from "../lib/constants";
 
 const BookingContext = createContext(null);
 

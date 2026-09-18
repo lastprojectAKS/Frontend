@@ -1,9 +1,8 @@
 import { MapPin, Film } from "lucide-react";
 import Button from "../ui/Button";
-import { getMovieById } from "../../data/movies";
 
 export default function CinemaCard({ cinema }) {
-  const movieTitles = cinema.movieIds.map((id) => getMovieById(id)?.title).filter(Boolean);
+  const movieTitles = cinema.movieTitles;
 
   return (
     <div className="flex flex-col gap-4 rounded-2xl border border-border bg-surface p-6 transition-colors hover:border-border-strong">

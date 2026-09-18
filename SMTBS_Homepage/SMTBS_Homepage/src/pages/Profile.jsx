@@ -1,22 +1,39 @@
 import { useState, useEffect } from "react";
-import { Star, Ticket, Heart, Settings as SettingsIcon, Check, LogOut, UserRound, Loader2 } from "lucide-react";
+import { Star, Ticket, Heart, Settings as SettingsIcon, Check, LogOut, UserRound, Loader2, X } from "lucide-react";
 import Tabs from "../components/ui/Tabs";
 import Badge from "../components/ui/Badge";
 import Button from "../components/ui/Button";
 import EmptyState from "../components/ui/EmptyState";
-import MovieGrid from "../components/movies/MovieGrid";
-import { mockFavourites } from "../data/bookings";
-import { getMovieById } from "../data/movies";
-import { listMyBookings } from "../services/bookingService";
+import { listMyBookings, cancelBooking } from "../services/bookingService";
 import { formatCurrency, formatDate, formatTime } from "../lib/format";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 
-const TODAY = "2026-08-21";
+function isUpcomingBooking(booking) {
+  const today = new Date().toISOString().slice(0, 10);
+  return booking.date >= today && booking.bookingStatus === "Confirmed";
+}
 
-function BookingRow({ booking }) {
+function BookingRow({ booking, onCancelled }) {
+  const { showToast } = useToast();
+  const [confirming, setConfirming] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+
   if (!booking.movie || !booking.cinema) return null;
-  const isUpcoming = booking.date >= TODAY && booking.bookingStatus === "Confirmed";
+  const isUpcoming = isUpcomingBooking(booking);
+
+  async function handleCancel() {
+    setCancelling(true);
+    try {
+      await cancelBooking(booking.id);
+      showToast("Booking cancelled");
+      onCancelled(booking.id);
+    } catch (err) {
+      showToast(err.message || "Couldn't cancel booking. Please try again.");
+      setCancelling(false);
+      setConfirming(false);
+    }
+  }
 
   return (
     <div className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -34,6 +51,31 @@ function BookingRow({ booking }) {
       <div className="flex items-center justify-between gap-3 sm:flex-col sm:items-end">
         <Badge tone={isUpcoming ? "success" : "neutral"}>{booking.bookingStatus === "Cancelled" ? "Cancelled" : isUpcoming ? "Upcoming" : "Past"}</Badge>
         <span className="text-sm font-semibold text-text-primary">{formatCurrency(booking.total)}</span>
+        {isUpcoming &&
+          (confirming ? (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleCancel}
+                disabled={cancelling}
+                className="text-xs font-semibold text-error underline underline-offset-2 disabled:opacity-60"
+              >
+                {cancelling ? "Cancelling…" : "Confirm cancel"}
+              </button>
+              <button type="button" onClick={() => setConfirming(false)} className="text-xs text-text-muted underline underline-offset-2">
+                Keep it
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirming(true)}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-text-muted underline underline-offset-2 hover:text-error"
+            >
+              <X className="h-3 w-3" aria-hidden="true" />
+              Cancel booking
+            </button>
+          ))}
       </div>
     </div>
   );
@@ -119,9 +161,12 @@ export default function Profile() {
     );
   }
 
-  const upcoming = bookings.filter((b) => b.date >= TODAY && b.bookingStatus === "Confirmed");
-  const past = bookings.filter((b) => !(b.date >= TODAY && b.bookingStatus === "Confirmed"));
-  const favouriteMovies = mockFavourites.map((id) => getMovieById(id)).filter(Boolean);
+  const upcoming = bookings.filter(isUpcomingBooking);
+  const past = bookings.filter((b) => !isUpcomingBooking(b));
+
+  function handleCancelled(bookingId) {
+    setBookings((prev) => prev.map((b) => (b.id === bookingId ? { ...b, bookingStatus: "Cancelled" } : b)));
+  }
 
   const bookingsSpinner = (
     <div className="flex justify-center py-10">
@@ -138,7 +183,7 @@ export default function Profile() {
       ) : upcoming.length > 0 ? (
         <div className="flex flex-col gap-3">
           {upcoming.map((booking) => (
-            <BookingRow key={booking.id} booking={booking} />
+            <BookingRow key={booking.id} booking={booking} onCancelled={handleCancelled} />
           ))}
         </div>
       ) : (
@@ -153,7 +198,7 @@ export default function Profile() {
       ) : past.length > 0 ? (
         <div className="flex flex-col gap-3">
           {past.map((booking) => (
-            <BookingRow key={booking.id} booking={booking} />
+            <BookingRow key={booking.id} booking={booking} onCancelled={handleCancelled} />
           ))}
         </div>
       ) : (
@@ -161,9 +206,12 @@ export default function Profile() {
       ),
     },
     {
+      // Favouriting isn't wired up anywhere yet (no toggle on movie cards,
+      // no table for it) — showing a real empty state here rather than
+      // faking saved movies, until that's actually built.
       value: "favourites",
       label: "Favourites",
-      content: <MovieGrid movies={favouriteMovies} emptyMessage="Tap the heart on a movie to save it here." />,
+      content: <EmptyState icon={Heart} title="No favourites yet" description="Favouriting movies is coming soon." />,
     },
     {
       value: "settings",
