@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus, X } from "lucide-react";
 import Button from "../../components/ui/Button";
-import { MOVIE_STATUSES } from "../data/movies";
+import { MOVIE_STATUSES } from "../services/movieService";
 import { PLACEHOLDER_POSTER } from "../lib/placeholder";
 
 const AGE_RATINGS = ["G", "PG", "PG-13", "R", "NC-17"];
@@ -21,7 +21,10 @@ function toFormState(movie) {
     language: movie?.language ?? "English",
     ageRating: movie?.ageRating ?? AGE_RATINGS[1],
     director: movie?.director ?? "",
-    cast: movie?.cast?.join(", ") ?? "",
+    // cast_members is jsonb {name, role} on the real table, not a flat
+    // string list — always keep at least one blank row so the form has
+    // something to render on "Add movie".
+    cast: movie?.cast?.length > 0 ? movie.cast.map((c) => ({ name: c.name ?? "", role: c.role ?? "" })) : [{ name: "", role: "" }],
     releaseDate: movie?.releaseDate ?? "",
     endDate: movie?.endDate ?? "",
     trailerUrl: movie?.trailerUrl ?? "",
@@ -38,6 +41,21 @@ export default function MovieForm({ movie, onSubmit, onCancel, submitting = fals
   function update(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
     setErrors((e) => ({ ...e, [field]: null }));
+  }
+
+  function updateCastMember(index, field, value) {
+    setForm((f) => ({
+      ...f,
+      cast: f.cast.map((c, i) => (i === index ? { ...c, [field]: value } : c)),
+    }));
+  }
+
+  function addCastMember() {
+    setForm((f) => ({ ...f, cast: [...f.cast, { name: "", role: "" }] }));
+  }
+
+  function removeCastMember(index) {
+    setForm((f) => ({ ...f, cast: f.cast.filter((_, i) => i !== index) }));
   }
 
   function validate() {
@@ -74,7 +92,7 @@ export default function MovieForm({ movie, onSubmit, onCancel, submitting = fals
       language: form.language.trim() || "English",
       ageRating: form.ageRating,
       director: form.director.trim(),
-      cast: form.cast.split(",").map((c) => c.trim()).filter(Boolean),
+      cast: form.cast.map((c) => ({ name: c.name.trim(), role: c.role.trim() })).filter((c) => c.name),
       releaseDate: form.releaseDate,
       endDate: form.endDate,
       trailerUrl: form.trailerUrl.trim(),
@@ -188,15 +206,39 @@ export default function MovieForm({ movie, onSubmit, onCancel, submitting = fals
         </label>
       </div>
 
-      <label className={labelClass}>
-        <span className={captionClass}>Cast (comma separated)</span>
-        <input
-          value={form.cast}
-          onChange={(e) => update("cast", e.target.value)}
-          placeholder="Timothée Chalamet, Zendaya"
-          className={inputClass}
-        />
-      </label>
+      <div className="flex flex-col gap-2">
+        <span className={captionClass}>Cast</span>
+        <div className="flex flex-col gap-2">
+          {form.cast.map((member, index) => (
+            <div key={index} className="flex gap-2">
+              <input
+                value={member.name}
+                onChange={(e) => updateCastMember(index, "name", e.target.value)}
+                placeholder="Actor name"
+                className={inputClass}
+              />
+              <input
+                value={member.role}
+                onChange={(e) => updateCastMember(index, "role", e.target.value)}
+                placeholder="Role"
+                className={inputClass}
+              />
+              <button
+                type="button"
+                onClick={() => removeCastMember(index)}
+                aria-label="Remove cast member"
+                disabled={form.cast.length === 1}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-text-secondary transition-colors hover:bg-surface-hover hover:text-error disabled:opacity-40"
+              >
+                <X className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
+          ))}
+        </div>
+        <Button type="button" variant="secondary" size="sm" icon={Plus} className="w-fit" onClick={addCastMember}>
+          Add cast member
+        </Button>
+      </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <label className={labelClass}>
