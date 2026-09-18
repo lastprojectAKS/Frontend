@@ -9,13 +9,25 @@ role-based access control.
 
 ## What's real vs. what's mock
 
-- **Real**: authentication and user accounts (email/password + Google OAuth,
-  for both customer and admin sign-in), the `profiles` table, and the
-  Row-Level Security policies that gate who can read or write what.
-- **Mock, but structured for it**: the movie/cinema/showtime/booking catalog
-  currently lives in local data files, accessed through an async service
-  layer (`src/admin/services/`) shaped exactly like real API calls — so it
-  can be swapped for live Supabase tables without touching the UI.
+- **Real, and what the customer-facing site runs on**: authentication and
+  user accounts (email/password + Google OAuth), the `profiles` table, the
+  full movie/cinema/offer/screen/showtime catalog, and bookings — including
+  a database-enforced double-booking guard (`book_seats()`) and a matching
+  cancellation path (`cancel_booking()`) that releases seats back for resale.
+  All of it sits behind Row-Level Security policies (see
+  `supabase/migrations/`). `src/services/` is the client-side layer that
+  talks to these tables.
+- **Mock, but structured for it**: the **admin portal's own CRUD** — its
+  movie/cinema/showtime/booking catalog lives in local data files
+  (`src/admin/data/`), accessed through an async service layer
+  (`src/admin/services/`) shaped exactly like real API calls, so it can be
+  swapped for the real tables above without touching the UI. Until that
+  migration happens, admin changes (adding a movie, cancelling a booking,
+  dashboard/report numbers, etc.) don't affect what customers see — the two
+  apps are reading from different data sources.
+- **Not built yet**: favouriting movies (no toggle in the UI, no table for
+  it — the Profile page's Favourites tab is an honest empty state, not
+  mock data).
 
 ## Stack
 
@@ -82,10 +94,13 @@ src/
     offers/    OfferCard
     booking/   Seat, SeatMap, BookingSummary
   pages/       One component per customer-facing route (see below)
-  data/        Local mock data — movies, cinemas, offers, showtimes, seat map, bookings
+  services/    Real Supabase queries/RPCs — movies, cinemas, offers, showtimes,
+               seats, bookings (book_seats / cancel_booking)
   context/     AuthContext (real Supabase session), BookingContext (in-progress
                booking state across the multi-page flow), ThemeContext, ToastContext
-  lib/         supabaseClient.js, plus small formatting helpers (duration, currency, date)
+  lib/         supabaseClient.js, constants.js (BOOKING_FEE — kept in sync with
+               the flat fee in book_seats()), formatting helpers (duration,
+               currency, date)
 
 src/admin/     Isolated admin portal — its own auth, layout, and data services
   pages/       Dashboard, Movies, Cinemas & Screens, Showtimes, Bookings,
@@ -116,12 +131,25 @@ supabase/
 
 ## Notes
 
-- Checkout and payment are still UI-only simulations — nothing is charged.
+- Checkout and payment are still UI-only simulations — nothing is charged —
+  but the booking and seats it creates are real.
+- Customers can cancel an upcoming booking from Profile → Upcoming; this
+  calls `cancel_booking()`, which releases the seats (so they're bookable
+  again) and decrements the showtime's occupancy in the same transaction.
+- Showtimes are extended on a rolling window relative to whenever
+  `0010_showtime_seed_and_cancel.sql` is run, not a fixed date — it's
+  additive and idempotent (closes out past 'Scheduled' showtimes to
+  'Completed', inserts fresh ones for the days ahead, never deletes), so
+  it's safe to re-run periodically (e.g. via a scheduled job) to keep the
+  bookable window from running dry, including against **smtbs.vercel.app**'s
+  live database with real bookings in it.
 - Phone number sign-in is scaffolded (`AuthContext.sendPhoneOtp` /
   `verifyPhoneOtp`) but not enabled in the UI — it needs a paid SMS provider
   (e.g. Twilio) connected in Supabase first.
 - Admin business rules (no overlapping showtimes on a screen, can't delete a
   movie/showtime with active bookings, screen capacity can't drop below what's
-  already booked, etc.) are enforced in `src/admin/lib/businessRules.js`.
+  already booked, etc.) are enforced in `src/admin/lib/businessRules.js` —
+  but only against the admin portal's own mock data (see "What's real vs.
+  what's mock" above), not the real showtimes/bookings tables yet.
 - `legacy-static/` holds the original vanilla HTML/CSS/JS version of this
   site, kept for reference.
