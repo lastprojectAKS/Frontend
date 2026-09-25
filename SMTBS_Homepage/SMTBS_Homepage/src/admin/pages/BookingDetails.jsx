@@ -60,7 +60,7 @@ export default function AdminBookingDetails() {
     setCanceling(true);
     try {
       await cancelBooking(id);
-      showToast(`Booking ${id} cancelled.`);
+      showToast(`Booking ${booking.bookingCode} cancelled.`);
       setCancelState(null);
       await refresh();
     } catch (err) {
@@ -74,7 +74,7 @@ export default function AdminBookingDetails() {
     setRefunding(true);
     try {
       await refundBooking(id);
-      showToast(`Booking ${id} refunded.`);
+      showToast(`Booking ${booking.bookingCode} refunded.`);
       setRefundOpen(false);
       await refresh();
     } catch (err) {
@@ -116,7 +116,7 @@ export default function AdminBookingDetails() {
       <div className="rounded-2xl border border-border bg-surface p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="font-mono text-sm text-text-muted">{booking.id}</p>
+            <p className="font-mono text-sm text-text-muted">{booking.bookingCode}</p>
             <h1 className="mt-1 text-2xl font-bold text-text-primary">{booking.movie?.title}</h1>
           </div>
           <div className="flex gap-2">
@@ -166,7 +166,7 @@ export default function AdminBookingDetails() {
         open={!!cancelState}
         onClose={() => setCancelState(null)}
         onConfirm={confirmCancel}
-        title={`Cancel booking ${booking.id}?`}
+        title={`Cancel booking ${booking.bookingCode}?`}
         description={`This will cancel ${booking.customer?.name}'s booking and free up ${booking.seats.length} seat(s). This can't be undone.`}
         confirmLabel="Cancel booking"
         destructive
@@ -179,7 +179,7 @@ export default function AdminBookingDetails() {
         open={refundOpen}
         onClose={() => setRefundOpen(false)}
         onConfirm={confirmRefund}
-        title={`Refund booking ${booking.id}?`}
+        title={`Refund booking ${booking.bookingCode}?`}
         description="This marks the payment as refunded and cancels the booking, freeing up the seats."
         confirmLabel="Refund booking"
         destructive

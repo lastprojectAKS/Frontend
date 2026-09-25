@@ -50,7 +50,7 @@ export default function AdminBookings() {
       const q = search.trim().toLowerCase();
       result = result.filter(
         (b) =>
-          b.id.toLowerCase().includes(q) ||
+          b.bookingCode.toLowerCase().includes(q) ||
           b.customer?.name.toLowerCase().includes(q) ||
           b.movie?.title.toLowerCase().includes(q)
       );
@@ -69,7 +69,7 @@ export default function AdminBookings() {
     setCanceling(true);
     try {
       await cancelBooking(cancelTarget.booking.id);
-      showToast(`Booking ${cancelTarget.booking.id} cancelled.`);
+      showToast(`Booking ${cancelTarget.booking.bookingCode} cancelled.`);
       setCancelTarget(null);
       await refresh();
     } catch (err) {
@@ -83,7 +83,7 @@ export default function AdminBookings() {
     setRefunding(true);
     try {
       await refundBooking(refundTarget.id);
-      showToast(`Booking ${refundTarget.id} refunded.`);
+      showToast(`Booking ${refundTarget.bookingCode} refunded.`);
       setRefundTarget(null);
       await refresh();
     } catch (err) {
@@ -94,7 +94,7 @@ export default function AdminBookings() {
   }
 
   const columns = [
-    { key: "id", header: "Booking ID", render: (b) => <span className="font-mono text-xs font-semibold text-text-primary">{b.id}</span> },
+    { key: "id", header: "Booking ID", render: (b) => <span className="font-mono text-xs font-semibold text-text-primary">{b.bookingCode}</span> },
     { key: "customer", header: "Customer", render: (b) => b.customer?.name ?? "—" },
     { key: "movie", header: "Movie", render: (b) => <span className="max-w-[160px] truncate">{b.movie?.title}</span> },
     { key: "cinema", header: "Cinema", render: (b) => b.cinema?.name },
@@ -113,7 +113,7 @@ export default function AdminBookings() {
           <button
             type="button"
             onClick={() => navigate(`/admin/bookings/${b.id}`)}
-            aria-label={`View booking ${b.id}`}
+            aria-label={`View booking ${b.bookingCode}`}
             className="flex h-8 w-8 items-center justify-center rounded-lg text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
           >
             <Eye className="h-4 w-4" aria-hidden="true" />
@@ -122,7 +122,7 @@ export default function AdminBookings() {
             <button
               type="button"
               onClick={() => setRefundTarget(b)}
-              aria-label={`Refund booking ${b.id}`}
+              aria-label={`Refund booking ${b.bookingCode}`}
               className="flex h-8 w-8 items-center justify-center rounded-lg text-text-secondary transition-colors hover:bg-accent/10 hover:text-accent-text"
             >
               <RotateCcw className="h-4 w-4" aria-hidden="true" />
@@ -132,7 +132,7 @@ export default function AdminBookings() {
             <button
               type="button"
               onClick={() => requestCancel(b)}
-              aria-label={`Cancel booking ${b.id}`}
+              aria-label={`Cancel booking ${b.bookingCode}`}
               className="flex h-8 w-8 items-center justify-center rounded-lg text-text-secondary transition-colors hover:bg-error/10 hover:text-error"
             >
               <Ban className="h-4 w-4" aria-hidden="true" />
@@ -167,7 +167,7 @@ export default function AdminBookings() {
         open={!!cancelTarget}
         onClose={() => setCancelTarget(null)}
         onConfirm={confirmCancel}
-        title={`Cancel booking ${cancelTarget?.booking.id}?`}
+        title={`Cancel booking ${cancelTarget?.booking.bookingCode}?`}
         description={`This will cancel ${cancelTarget?.booking.customer?.name}'s booking for "${cancelTarget?.booking.movie?.title}" and free up their ${cancelTarget?.booking.seats.length} seat(s). This can't be undone.`}
         confirmLabel="Cancel booking"
         destructive
@@ -180,7 +180,7 @@ export default function AdminBookings() {
         open={!!refundTarget}
         onClose={() => setRefundTarget(null)}
         onConfirm={confirmRefund}
-        title={`Refund booking ${refundTarget?.id}?`}
+        title={`Refund booking ${refundTarget?.bookingCode}?`}
         description="This marks the payment as refunded and cancels the booking, freeing up the seats."
         confirmLabel="Refund booking"
         destructive
