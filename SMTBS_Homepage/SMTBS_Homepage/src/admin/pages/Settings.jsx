@@ -45,7 +45,7 @@ function Toggle({ checked, onChange, label, description }) {
 }
 
 export default function AdminSettings() {
-  const { admin, updateProfile } = useAdminAuth();
+  const { admin, updateProfile, login, updatePassword } = useAdminAuth();
   const { theme, toggleTheme } = useTheme();
   const { showToast } = useToast();
 
@@ -73,7 +73,7 @@ export default function AdminSettings() {
     showToast("Profile updated.");
   }
 
-  function savePassword(e) {
+  async function savePassword(e) {
     e.preventDefault();
     setPasswordError("");
     if (!passwords.current || !passwords.next || !passwords.confirm) {
@@ -88,12 +88,28 @@ export default function AdminSettings() {
       setPasswordError("New password and confirmation don't match.");
       return;
     }
+
     setSavingPassword(true);
-    setTimeout(() => {
+
+    // Re-verifying the current password via a real sign-in (rather than
+    // trusting whatever was typed) is what makes that field meaningful —
+    // updateUser() below would happily set a new password on the existing
+    // session without ever checking it otherwise.
+    const verify = await login({ email: admin.email, password: passwords.current });
+    if (!verify.success) {
       setSavingPassword(false);
-      setPasswords({ current: "", next: "", confirm: "" });
-      showToast("Password updated. (Demo only — not persisted.)");
-    }, 300);
+      setPasswordError("Current password is incorrect.");
+      return;
+    }
+
+    const result = await updatePassword(passwords.next);
+    setSavingPassword(false);
+    if (!result.success) {
+      setPasswordError(result.error || "Couldn't update your password. Please try again.");
+      return;
+    }
+    setPasswords({ current: "", next: "", confirm: "" });
+    showToast("Password updated.");
   }
 
   function saveNotifications() {
@@ -134,7 +150,7 @@ export default function AdminSettings() {
           </form>
         </SettingsSection>
 
-        <SettingsSection icon={Lock} title="Security" description="Update your password. This is a frontend demo — nothing is sent to a server.">
+        <SettingsSection icon={Lock} title="Security" description="Update your password.">
           <form onSubmit={savePassword} className="flex flex-col gap-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <label className={labelClass}>
