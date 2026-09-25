@@ -20,7 +20,7 @@ function GoogleIcon(props) {
 }
 
 export default function AuthModal() {
-  const { authModal, closeAuthModal, login, signup, sendPhoneOtp, verifyPhoneOtp, loginWithGoogle } = useAuth();
+  const { authModal, closeAuthModal, login, signup, sendPhoneOtp, verifyPhoneOtp, loginWithGoogle, requestPasswordReset } = useAuth();
   const { showToast } = useToast();
 
   const [mode, setMode] = useState(authModal.mode);
@@ -34,6 +34,8 @@ export default function AuthModal() {
   const [otp, setOtp] = useState("");
   const [phoneStep, setPhoneStep] = useState("enter");
 
+  const [forgotSent, setForgotSent] = useState(false);
+
   useEffect(() => {
     if (authModal.open) {
       setMode(authModal.mode);
@@ -42,6 +44,7 @@ export default function AuthModal() {
       setPhone("");
       setOtp("");
       setError("");
+      setForgotSent(false);
     }
   }, [authModal.open, authModal.mode]);
 
@@ -96,6 +99,20 @@ export default function AuthModal() {
     closeAuthModal();
   }
 
+  async function handleForgotSubmit(e) {
+    e.preventDefault();
+    const email = e.target.email.value;
+    setSubmitting(true);
+    setError("");
+    const result = await requestPasswordReset(email);
+    setSubmitting(false);
+    if (!result.success) {
+      setError(result.error || "Couldn't send that email. Please try again.");
+      return;
+    }
+    setForgotSent(true);
+  }
+
   async function handleGoogle() {
     setGoogleSubmitting(true);
     setError("");
@@ -106,6 +123,40 @@ export default function AuthModal() {
       setGoogleSubmitting(false);
       setError(result.error || "Couldn't start Google sign-in. Please try again.");
     }
+  }
+
+  if (mode === "forgot") {
+    return (
+      <Modal open={authModal.open} onClose={closeAuthModal} title="Reset your password" size="sm">
+        {forgotSent ? (
+          <div className="flex flex-col items-center gap-3 text-center">
+            <p className="text-sm text-text-secondary">
+              If an account exists for that email, we've sent a link to reset your password. Check your inbox.
+            </p>
+            <button type="button" onClick={() => setMode("login")} className="text-sm font-semibold text-accent-text hover:underline">
+              Back to log in
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handleForgotSubmit} className="flex flex-col gap-4">
+            <label className="flex flex-col gap-1.5 text-sm">
+              <span className="font-medium text-text-secondary">Email</span>
+              <input name="email" required type="email" placeholder="you@example.com" autoComplete="email" className={inputClass} />
+            </label>
+
+            {error && <p className="text-sm text-error">{error}</p>}
+
+            <Button type="submit" className="mt-1 w-full" disabled={submitting}>
+              {submitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : "Send reset link"}
+            </Button>
+
+            <button type="button" onClick={() => setMode("login")} className="text-center text-sm font-semibold text-accent-text hover:underline">
+              Back to log in
+            </button>
+          </form>
+        )}
+      </Modal>
+    );
   }
 
   return (
@@ -179,6 +230,16 @@ export default function AuthModal() {
               className={inputClass}
             />
           </label>
+
+          {mode === "login" && (
+            <button
+              type="button"
+              onClick={() => setMode("forgot")}
+              className="-mt-2 self-end text-xs font-semibold text-accent-text hover:underline"
+            >
+              Forgot password?
+            </button>
+          )}
 
           {error && <p className="text-sm text-error">{error}</p>}
 

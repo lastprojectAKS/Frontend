@@ -18,16 +18,18 @@ function GoogleIcon(props) {
 }
 
 export default function AdminLogin() {
-  const { isAuthenticated, loading, login, loginWithGoogle, logout } = useAdminAuth();
+  const { isAuthenticated, loading, login, loginWithGoogle, logout, requestPasswordReset } = useAdminAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
 
+  const [mode, setMode] = useState("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [googleSubmitting, setGoogleSubmitting] = useState(false);
+  const [forgotSent, setForgotSent] = useState(false);
 
   // Google is a full-page redirect, not a call we get a return value from —
   // we land back here at /admin/login?oauth=1 once Supabase has resolved
@@ -78,6 +80,23 @@ export default function AdminLogin() {
     navigate(location.state?.from ?? "/admin/dashboard", { replace: true });
   }
 
+  async function handleForgotSubmit(e) {
+    e.preventDefault();
+    if (!email.trim() || !EMAIL_RE.test(email.trim())) {
+      setErrors({ email: "Enter a valid email address." });
+      return;
+    }
+    setSubmitting(true);
+    setErrors({});
+    const result = await requestPasswordReset(email.trim());
+    setSubmitting(false);
+    if (!result.success) {
+      setErrors({ form: result.error || "Couldn't send that email. Please try again." });
+      return;
+    }
+    setForgotSent(true);
+  }
+
   async function handleGoogle() {
     setGoogleSubmitting(true);
     setErrors({});
@@ -107,71 +126,122 @@ export default function AdminLogin() {
             </div>
           )}
 
-          <Button type="button" variant="secondary" className="w-full" disabled={googleSubmitting} onClick={handleGoogle}>
-            {googleSubmitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <GoogleIcon />}
-            Continue with Google
-          </Button>
+          {mode === "forgot" ? (
+            forgotSent ? (
+              <div className="flex flex-col items-center gap-3 text-center">
+                <p className="text-sm text-text-secondary">
+                  If an admin account exists for that email, we've sent a link to reset your password.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode("login");
+                    setForgotSent(false);
+                  }}
+                  className="text-sm font-semibold text-accent-text hover:underline"
+                >
+                  Back to sign in
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleForgotSubmit} noValidate>
+                <label className="mb-4 flex flex-col gap-1.5 text-sm">
+                  <span className="font-medium text-text-secondary">Email</span>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="admin@smtbs.example"
+                    autoComplete="email"
+                    aria-invalid={Boolean(errors.email)}
+                    className={`h-11 rounded-lg border bg-bg-secondary px-3.5 text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent ${
+                      errors.email ? "border-error" : "border-border-strong"
+                    }`}
+                  />
+                  {errors.email && <span className="text-xs text-error">{errors.email}</span>}
+                </label>
 
-          <div className="my-5 flex items-center gap-3 text-xs font-medium text-text-muted">
-            <span className="h-px flex-1 bg-border" />
-            or
-            <span className="h-px flex-1 bg-border" />
-          </div>
+                <Button type="submit" disabled={submitting} className="mb-4 w-full">
+                  {submitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : "Send reset link"}
+                </Button>
 
-          <form onSubmit={handleSubmit} noValidate>
-            <label className="mb-4 flex flex-col gap-1.5 text-sm">
-              <span className="font-medium text-text-secondary">Email</span>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@smtbs.example"
-                autoComplete="email"
-                aria-invalid={Boolean(errors.email)}
-                className={`h-11 rounded-lg border bg-bg-secondary px-3.5 text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent ${
-                  errors.email ? "border-error" : "border-border-strong"
-                }`}
-              />
-              {errors.email && <span className="text-xs text-error">{errors.email}</span>}
-            </label>
+                <button type="button" onClick={() => setMode("login")} className="w-full text-center text-sm font-medium text-accent-text hover:underline">
+                  Back to sign in
+                </button>
+              </form>
+            )
+          ) : (
+            <>
+              <Button type="button" variant="secondary" className="w-full" disabled={googleSubmitting} onClick={handleGoogle}>
+                {googleSubmitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <GoogleIcon />}
+                Continue with Google
+              </Button>
 
-            <label className="mb-4 flex flex-col gap-1.5 text-sm">
-              <span className="font-medium text-text-secondary">Password</span>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                autoComplete="current-password"
-                aria-invalid={Boolean(errors.password)}
-                className={`h-11 rounded-lg border bg-bg-secondary px-3.5 text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent ${
-                  errors.password ? "border-error" : "border-border-strong"
-                }`}
-              />
-              {errors.password && <span className="text-xs text-error">{errors.password}</span>}
-            </label>
+              <div className="my-5 flex items-center gap-3 text-xs font-medium text-text-muted">
+                <span className="h-px flex-1 bg-border" />
+                or
+                <span className="h-px flex-1 bg-border" />
+              </div>
 
-            <div className="mb-5 flex items-center justify-end text-sm">
-              <button
-                type="button"
-                onClick={() => setErrors({ form: "Password reset isn't set up yet — ask a Super Admin to reset it for you." })}
-                className="font-medium text-accent-text hover:underline"
-              >
-                Forgot password?
-              </button>
-            </div>
+              <form onSubmit={handleSubmit} noValidate>
+                <label className="mb-4 flex flex-col gap-1.5 text-sm">
+                  <span className="font-medium text-text-secondary">Email</span>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="admin@smtbs.example"
+                    autoComplete="email"
+                    aria-invalid={Boolean(errors.email)}
+                    className={`h-11 rounded-lg border bg-bg-secondary px-3.5 text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent ${
+                      errors.email ? "border-error" : "border-border-strong"
+                    }`}
+                  />
+                  {errors.email && <span className="text-xs text-error">{errors.email}</span>}
+                </label>
 
-            <Button type="submit" disabled={submitting} className="w-full">
-              {submitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                  Signing in...
-                </>
-              ) : (
-                "Sign In"
-              )}
-            </Button>
-          </form>
+                <label className="mb-4 flex flex-col gap-1.5 text-sm">
+                  <span className="font-medium text-text-secondary">Password</span>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    autoComplete="current-password"
+                    aria-invalid={Boolean(errors.password)}
+                    className={`h-11 rounded-lg border bg-bg-secondary px-3.5 text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent ${
+                      errors.password ? "border-error" : "border-border-strong"
+                    }`}
+                  />
+                  {errors.password && <span className="text-xs text-error">{errors.password}</span>}
+                </label>
+
+                <div className="mb-5 flex items-center justify-end text-sm">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode("forgot");
+                      setErrors({});
+                    }}
+                    className="font-medium text-accent-text hover:underline"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+
+                <Button type="submit" disabled={submitting} className="w-full">
+                  {submitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                      Signing in...
+                    </>
+                  ) : (
+                    "Sign In"
+                  )}
+                </Button>
+              </form>
+            </>
+          )}
         </div>
       </div>
     </div>

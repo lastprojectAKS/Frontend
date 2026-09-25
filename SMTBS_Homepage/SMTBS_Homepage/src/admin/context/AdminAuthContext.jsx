@@ -93,6 +93,20 @@ export function AdminAuthProvider({ children }) {
     return { success: true };
   }, []);
 
+  const requestPasswordReset = useCallback(async (email) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/admin/reset-password`,
+    });
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  }, []);
+
+  const updatePassword = useCallback(async (newPassword) => {
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  }, []);
+
   const updateProfile = useCallback(
     async (patch) => {
       if (!admin) return;
@@ -110,6 +124,8 @@ export function AdminAuthProvider({ children }) {
     loginWithGoogle,
     logout,
     updateProfile,
+    requestPasswordReset,
+    updatePassword,
   };
 
   return <AdminAuthContext.Provider value={value}>{children}</AdminAuthContext.Provider>;

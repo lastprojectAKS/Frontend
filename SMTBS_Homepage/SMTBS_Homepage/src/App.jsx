@@ -11,11 +11,13 @@ import SeatSelection from "./pages/SeatSelection";
 import Checkout from "./pages/Checkout";
 import BookingSuccess from "./pages/BookingSuccess";
 import Profile from "./pages/Profile";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 import { AdminAuthProvider } from "./admin/context/AdminAuthContext";
 import ProtectedAdminRoute from "./admin/components/ProtectedAdminRoute";
 import AdminLogin from "./admin/pages/AdminLogin";
+import AdminResetPassword from "./admin/pages/AdminResetPassword";
 import AdminDashboard from "./admin/pages/Dashboard";
 import AdminMovies from "./admin/pages/Movies";
 import AdminMovieDetails from "./admin/pages/MovieDetails";
@@ -58,6 +60,7 @@ export default function App() {
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/booking/success" element={<BookingSuccess />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="*" element={<NotFound />} />
       </Route>
 
@@ -65,6 +68,7 @@ export default function App() {
           state with the customer app beyond the design-token theme. */}
       <Route element={<AdminAuthGate />}>
         <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin/reset-password" element={<AdminResetPassword />} />
 
         <Route element={<ProtectedAdminRoute />}>
           <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />

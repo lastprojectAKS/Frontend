@@ -100,6 +100,24 @@ export function AuthProvider({ children }) {
     return { success: true };
   }, []);
 
+  // Sends a real reset-password email via Supabase's own auth flow — the
+  // link lands on /reset-password, which supabase-js turns into an active
+  // session automatically (detectSessionInUrl), then updatePassword below
+  // sets the new password on it.
+  const requestPasswordReset = useCallback(async (email) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  }, []);
+
+  const updatePassword = useCallback(async (newPassword) => {
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  }, []);
+
   const openAuthModal = useCallback((mode = "login") => setAuthModal({ open: true, mode }), []);
   const closeAuthModal = useCallback(() => setAuthModal((s) => ({ ...s, open: false })), []);
 
@@ -126,6 +144,8 @@ export function AuthProvider({ children }) {
     sendPhoneOtp,
     verifyPhoneOtp,
     loginWithGoogle,
+    requestPasswordReset,
+    updatePassword,
     authModal,
     openAuthModal,
     closeAuthModal,
