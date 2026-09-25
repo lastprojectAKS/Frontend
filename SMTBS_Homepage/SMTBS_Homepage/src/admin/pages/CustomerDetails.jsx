@@ -64,7 +64,7 @@ export default function AdminCustomerDetails() {
   }
 
   const historyColumns = [
-    { key: "id", header: "Booking ID", render: (b) => <span className="font-mono text-xs font-semibold text-text-primary">{b.id}</span> },
+    { key: "id", header: "Booking ID", render: (b) => <span className="font-mono text-xs font-semibold text-text-primary">{b.bookingCode}</span> },
     { key: "movie", header: "Movie", render: (b) => b.movie?.title },
     { key: "cinema", header: "Cinema", render: (b) => b.cinema?.name },
     { key: "showtime", header: "Showtime", render: (b) => `${b.date}, ${b.startTime}` },
