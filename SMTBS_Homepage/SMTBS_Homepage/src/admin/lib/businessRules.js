@@ -2,15 +2,15 @@
 // instead of re-implementing checks inline, so the rule lives in exactly
 // one place and every screen enforces it the same way.
 //
-// Mid-migration state: canDeleteMovie() below checks the real `bookings`
-// table (Movies is migrated — see admin/services/movieService.js) and is
-// therefore async, while every other rule here still reads admin's mock
-// data (Showtimes/Bookings/Cinemas haven't migrated yet) and stays sync.
-// That split resolves itself as each resource migrates in turn.
+// Mid-migration state: canDeleteMovie()/findShowtimeConflict()/
+// canDeleteShowtime() below check real Supabase tables (Movies, Cinemas &
+// Screens, and now Showtimes are all migrated) and are therefore async.
+// canReduceScreenCapacity()/canDeactivateCinema() made the same move earlier
+// and live in admin/services/cinemaService.js instead, to avoid a
+// cinemaService ↔ businessRules circular import. Only Bookings/Customers
+// still read admin's mock data — that split resolves itself as each
+// resource migrates in turn.
 
-import { showtimes } from "../data/showtimes";
-import { bookings } from "../data/bookings";
-import { getScreenCapacity } from "../data/screens";
 import { supabase } from "../../lib/supabaseClient";
 
 function toMinutes(time) {
@@ -19,24 +19,34 @@ function toMinutes(time) {
 }
 
 /**
- * Two showtimes on the same screen/date overlap if one starts before the
- * other ends. Cancelled showtimes don't block new ones from reusing the slot.
+ * A soft, advisory pre-check so the form can show a conflict warning before
+ * the admin even tries to save — but the real, authoritative guard is the
+ * `exclude using gist` constraint on public.showtimes (see migration 0006).
+ * That constraint can't be bypassed even if this check somehow misses a
+ * case; showtimeService.js's create/updateShowtime translate its raw
+ * exclusion-violation error into the same friendly message either way.
  */
-export function findShowtimeConflict({ screenId, date, startTime, endTime, excludeShowtimeId }) {
+export async function findShowtimeConflict({ screenId, date, startTime, endTime, excludeShowtimeId }) {
+  const { data, error } = await supabase
+    .from("showtimes")
+    .select("id, movie_id, start_time, end_time")
+    .eq("screen_id", screenId)
+    .eq("show_date", date)
+    .neq("status", "Cancelled");
+  if (error) throw error;
+
   const newStart = toMinutes(startTime);
   const newEnd = toMinutes(endTime);
 
-  const conflict = showtimes.find((s) => {
+  const conflict = data.find((s) => {
     if (s.id === excludeShowtimeId) return false;
-    if (s.screenId !== screenId || s.date !== date) return false;
-    if (s.status === "Cancelled") return false;
-
-    const existingStart = toMinutes(s.startTime);
-    const existingEnd = toMinutes(s.endTime);
+    const existingStart = toMinutes(s.start_time);
+    const existingEnd = toMinutes(s.end_time);
     return newStart < existingEnd && existingStart < newEnd;
   });
 
-  return conflict || null;
+  if (!conflict) return null;
+  return { id: conflict.id, movieId: conflict.movie_id, startTime: conflict.start_time.slice(0, 5), endTime: conflict.end_time.slice(0, 5) };
 }
 
 export function validateShowtimeTimes(startTime, endTime) {
@@ -45,12 +55,19 @@ export function validateShowtimeTimes(startTime, endTime) {
   return null;
 }
 
-export function isShowtimeInPast(showtime, today = "2026-08-21") {
+export function isShowtimeInPast(showtime, today = new Date().toISOString().slice(0, 10)) {
   return showtime.date < today;
 }
 
-export function canDeleteShowtime(showtimeId) {
-  const hasBookings = bookings.some((b) => b.showtimeId === showtimeId && b.bookingStatus !== "Cancelled");
+export async function canDeleteShowtime(showtimeId) {
+  const { count, error } = await supabase
+    .from("bookings")
+    .select("id", { count: "exact", head: true })
+    .eq("showtime_id", showtimeId)
+    .neq("booking_status", "Cancelled");
+  if (error) throw error;
+
+  const hasBookings = (count ?? 0) > 0;
   return { allowed: !hasBookings, reason: hasBookings ? "This showtime has existing bookings and can only be cancelled, not deleted." : null };
 }
 
@@ -91,36 +108,6 @@ export function canCreateShowtimeForScreen(screen, cinema) {
   return { allowed: true, reason: null };
 }
 
-/**
- * A screen's capacity can never drop below the largest showtime it has
- * already sold seats for — shrinking it further would leave bookings
- * pointing at seats that no longer exist.
- */
-export function canReduceScreenCapacity(screenId, newCapacity) {
-  const screenShowtimes = showtimes.filter((s) => s.screenId === screenId && s.status !== "Cancelled");
-  const maxBooked = screenShowtimes.reduce((max, s) => Math.max(max, s.bookedSeats), 0);
-
-  return {
-    allowed: newCapacity >= maxBooked,
-    reason:
-      newCapacity >= maxBooked
-        ? null
-        : `This screen has a showtime with ${maxBooked} seats already booked. Capacity can't drop below that.`,
-  };
-}
-
-export function canDeactivateCinema(cinemaId, today = "2026-08-21") {
-  const upcoming = showtimes.some(
-    (s) => s.cinemaId === cinemaId && s.date >= today && s.status === "Scheduled"
-  );
-  return {
-    allowed: true,
-    warning: upcoming
-      ? "This cinema has upcoming scheduled showtimes. Deactivating it will hide it from customers, but existing showtimes and bookings are preserved."
-      : null,
-  };
-}
-
 export function canCancelBooking(booking) {
   return {
     allowed: booking.bookingStatus === "Confirmed" || booking.bookingStatus === "Pending",
@@ -134,5 +121,3 @@ export function calculateOccupancy(bookedSeats, totalSeats) {
   if (!totalSeats) return 0;
   return Math.min(1, bookedSeats / totalSeats);
 }
-
-export { getScreenCapacity };

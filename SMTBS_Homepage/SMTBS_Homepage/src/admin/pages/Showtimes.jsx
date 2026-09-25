@@ -12,22 +12,29 @@ import Button from "../../components/ui/Button";
 import { usePagination } from "../lib/usePagination";
 import { useToast } from "../../context/ToastContext";
 import { canDeleteShowtime, isShowtimeInPast } from "../lib/businessRules";
-import { movies } from "../data/movies";
-import { cinemas } from "../data/cinemas";
+import { listMovies } from "../services/movieService";
+import { listCinemas } from "../services/cinemaService";
 import { listShowtimes, createShowtime, updateShowtime, cancelShowtime, deleteShowtime, SHOWTIME_STATUSES } from "../services/showtimeService";
 
 const STATUS_OPTIONS = [{ value: "all", label: "All statuses" }, ...SHOWTIME_STATUSES.map((s) => ({ value: s, label: s }))];
-const MOVIE_OPTIONS = [{ value: "all", label: "All movies" }, ...movies.map((m) => ({ value: m.id, label: m.title }))];
-const CINEMA_OPTIONS = [{ value: "all", label: "All cinemas" }, ...cinemas.map((c) => ({ value: c.id, label: c.name }))];
 
 export default function AdminShowtimes() {
   const { showToast } = useToast();
 
   const [showtimes, setShowtimes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [movieOptions, setMovieOptions] = useState([{ value: "all", label: "All movies" }]);
+  const [cinemaOptions, setCinemaOptions] = useState([{ value: "all", label: "All cinemas" }]);
   const [movieFilter, setMovieFilter] = useState("all");
   const [cinemaFilter, setCinemaFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+
+  useEffect(() => {
+    Promise.all([listMovies(), listCinemas()]).then(([movies, cinemas]) => {
+      setMovieOptions([{ value: "all", label: "All movies" }, ...movies.map((m) => ({ value: m.id, label: m.title }))]);
+      setCinemaOptions([{ value: "all", label: "All cinemas" }, ...cinemas.map((c) => ({ value: c.id, label: c.name }))]);
+    });
+  }, []);
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingShowtime, setEditingShowtime] = useState(null);
@@ -102,8 +109,8 @@ export default function AdminShowtimes() {
     }
   }
 
-  function requestDelete(showtime) {
-    const { allowed, reason } = canDeleteShowtime(showtime.id);
+  async function requestDelete(showtime) {
+    const { allowed, reason } = await canDeleteShowtime(showtime.id);
     setDeleteTarget({ showtime, allowed, reason });
   }
 
@@ -199,8 +206,8 @@ export default function AdminShowtimes() {
       />
 
       <div className="mb-4 flex flex-wrap gap-3">
-        <FilterDropdown label="Movie" value={movieFilter} onChange={setMovieFilter} options={MOVIE_OPTIONS} />
-        <FilterDropdown label="Cinema" value={cinemaFilter} onChange={setCinemaFilter} options={CINEMA_OPTIONS} />
+        <FilterDropdown label="Movie" value={movieFilter} onChange={setMovieFilter} options={movieOptions} />
+        <FilterDropdown label="Cinema" value={cinemaFilter} onChange={setCinemaFilter} options={cinemaOptions} />
         <FilterDropdown label="Status" value={statusFilter} onChange={setStatusFilter} options={STATUS_OPTIONS} />
       </div>
 
