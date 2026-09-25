@@ -5,6 +5,8 @@ import Badge from "../components/ui/Badge";
 import Button from "../components/ui/Button";
 import EmptyState from "../components/ui/EmptyState";
 import { listMyBookings, cancelBooking } from "../services/bookingService";
+import { listFavouriteMovies } from "../services/favouriteService";
+import MovieGrid from "../components/movies/MovieGrid";
 import { formatCurrency, formatDate, formatTime } from "../lib/format";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
@@ -125,6 +127,8 @@ export default function Profile() {
   const { showToast } = useToast();
   const [bookings, setBookings] = useState([]);
   const [bookingsLoading, setBookingsLoading] = useState(true);
+  const [favourites, setFavourites] = useState([]);
+  const [favouritesLoading, setFavouritesLoading] = useState(true);
 
   useEffect(() => {
     if (!isLoggedIn) return;
@@ -133,6 +137,12 @@ export default function Profile() {
       if (!cancelled) {
         setBookings(data);
         setBookingsLoading(false);
+      }
+    });
+    listFavouriteMovies().then((data) => {
+      if (!cancelled) {
+        setFavourites(data);
+        setFavouritesLoading(false);
       }
     });
     return () => {
@@ -208,12 +218,13 @@ export default function Profile() {
       ),
     },
     {
-      // Favouriting isn't wired up anywhere yet (no toggle on movie cards,
-      // no table for it) — showing a real empty state here rather than
-      // faking saved movies, until that's actually built.
       value: "favourites",
       label: "Favourites",
-      content: <EmptyState icon={Heart} title="No favourites yet" description="Favouriting movies is coming soon." />,
+      content: favouritesLoading ? (
+        bookingsSpinner
+      ) : (
+        <MovieGrid movies={favourites} emptyMessage="Tap the heart on a movie to save it here." />
+      ),
     },
     {
       value: "settings",

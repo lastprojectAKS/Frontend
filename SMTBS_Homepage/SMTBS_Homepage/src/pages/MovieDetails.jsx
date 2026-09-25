@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, Navigate } from "react-router-dom";
-import { Ticket, Play, Clock, Calendar, Globe, ShieldAlert, Loader2 } from "lucide-react";
+import { Ticket, Play, Clock, Calendar, Globe, ShieldAlert, Loader2, Heart } from "lucide-react";
 import Rating from "../components/ui/Rating";
 import Badge from "../components/ui/Badge";
 import Button from "../components/ui/Button";
@@ -8,6 +8,9 @@ import TrailerModal from "../components/movies/TrailerModal";
 import { getMovie, isNowShowing } from "../services/movieService";
 import { getCinemasForMovie } from "../services/cinemaService";
 import { formatDuration, formatDate } from "../lib/format";
+import { useFavourites } from "../context/FavouritesContext";
+import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 
 export default function MovieDetails() {
   const { id } = useParams();
@@ -16,6 +19,9 @@ export default function MovieDetails() {
   const [cinemas, setCinemas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const { isFavourite, toggleFavourite } = useFavourites();
+  const { openAuthModal } = useAuth();
+  const { showToast } = useToast();
 
   useEffect(() => {
     let cancelled = false;
@@ -51,6 +57,16 @@ export default function MovieDetails() {
   if (notFound || !movie) return <Navigate to="/movies" replace />;
 
   const isComingSoon = !isNowShowing(movie);
+  const favourited = isFavourite(movie.id);
+
+  async function handleToggleFavourite() {
+    const result = await toggleFavourite(movie.id);
+    if (result.requiresLogin) {
+      openAuthModal("login");
+    } else if (!result.success) {
+      showToast(result.error || "Couldn't update favourites. Please try again.");
+    }
+  }
 
   return (
     <div>
@@ -99,6 +115,15 @@ export default function MovieDetails() {
                 <Button variant="secondary" size="lg" icon={Play} onClick={() => setTrailerOpen(true)}>
                   Watch Trailer
                 </Button>
+                <button
+                  type="button"
+                  onClick={handleToggleFavourite}
+                  aria-label={favourited ? `Remove ${movie.title} from favourites` : `Add ${movie.title} to favourites`}
+                  aria-pressed={favourited}
+                  className="flex h-12 w-12 items-center justify-center rounded-lg border border-border-strong bg-surface text-text-secondary transition-colors hover:text-accent-text"
+                >
+                  <Heart className={`h-5 w-5 ${favourited ? "fill-accent text-accent" : ""}`} aria-hidden="true" />
+                </button>
               </div>
             </div>
           </div>

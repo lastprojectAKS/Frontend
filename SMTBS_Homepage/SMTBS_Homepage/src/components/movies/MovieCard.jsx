@@ -1,15 +1,34 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Play, Ticket } from "lucide-react";
+import { Play, Ticket, Heart } from "lucide-react";
 import Rating from "../ui/Rating";
 import Badge from "../ui/Badge";
 import TrailerModal from "./TrailerModal";
 import { formatDuration } from "../../lib/format";
+import { isComingSoon as checkIsComingSoon } from "../../services/movieService";
+import { useFavourites } from "../../context/FavouritesContext";
+import { useAuth } from "../../context/AuthContext";
+import { useToast } from "../../context/ToastContext";
 
 export default function MovieCard({ movie }) {
   const [trailerOpen, setTrailerOpen] = useState(false);
-  const isComingSoon = movie.status === "coming-soon";
+  const isComingSoon = checkIsComingSoon(movie);
+  const { isFavourite, toggleFavourite } = useFavourites();
+  const { openAuthModal } = useAuth();
+  const { showToast } = useToast();
+  const favourited = isFavourite(movie.id);
+
+  async function handleToggleFavourite(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const result = await toggleFavourite(movie.id);
+    if (result.requiresLogin) {
+      openAuthModal("login");
+    } else if (!result.success) {
+      showToast(result.error || "Couldn't update favourites. Please try again.");
+    }
+  }
 
   return (
     <>
@@ -31,6 +50,16 @@ export default function MovieCard({ movie }) {
               {isComingSoon ? "Coming Soon" : "Now Showing"}
             </Badge>
           </div>
+
+          <button
+            type="button"
+            onClick={handleToggleFavourite}
+            aria-label={favourited ? `Remove ${movie.title} from favourites` : `Add ${movie.title} to favourites`}
+            aria-pressed={favourited}
+            className="absolute right-2.5 top-2.5 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm transition-colors hover:bg-black/60"
+          >
+            <Heart className={`h-4 w-4 ${favourited ? "fill-accent text-accent" : ""}`} aria-hidden="true" />
+          </button>
 
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/60 opacity-0 transition-opacity duration-200 group-hover:pointer-events-auto group-hover:opacity-100">
             <button

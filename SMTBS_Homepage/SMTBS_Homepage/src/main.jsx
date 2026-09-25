@@ -4,6 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import { BookingProvider } from "./context/BookingContext";
 import { AuthProvider } from "./context/AuthContext";
+import { FavouritesProvider } from "./context/FavouritesContext";
 import { ToastProvider } from "./context/ToastContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import "./index.css";
@@ -14,9 +15,11 @@ createRoot(document.getElementById("root")).render(
       <ThemeProvider>
         <ToastProvider>
           <AuthProvider>
-            <BookingProvider>
-              <App />
-            </BookingProvider>
+            <FavouritesProvider>
+              <BookingProvider>
+                <App />
+              </BookingProvider>
+            </FavouritesProvider>
           </AuthProvider>
         </ToastProvider>
       </ThemeProvider>

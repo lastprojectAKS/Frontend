@@ -4,7 +4,7 @@ import { supabase } from "../lib/supabaseClient";
 // exist for admin's lifecycle but were never meant to be publicly bookable.
 const VISIBLE_STATUSES = ["Now Showing", "Upcoming"];
 
-function mapMovie(row) {
+export function mapMovie(row) {
   return {
     id: row.id,
     title: row.title,
