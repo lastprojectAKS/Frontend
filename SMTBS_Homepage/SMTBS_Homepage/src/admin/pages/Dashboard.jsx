@@ -63,7 +63,7 @@ export default function Dashboard() {
   }
 
   const bookingColumns = [
-    { key: "id", header: "Booking ID", render: (r) => <span className="font-mono text-xs text-text-primary">{r.booking.id}</span> },
+    { key: "id", header: "Booking ID", render: (r) => <span className="font-mono text-xs text-text-primary">{r.booking.bookingCode}</span> },
     { key: "customer", header: "Customer", render: (r) => r.booking.customer?.name ?? "—" },
     { key: "movie", header: "Movie", render: (r) => r.movie?.title ?? "—" },
     { key: "cinema", header: "Cinema", render: (r) => r.cinema?.name ?? "—" },

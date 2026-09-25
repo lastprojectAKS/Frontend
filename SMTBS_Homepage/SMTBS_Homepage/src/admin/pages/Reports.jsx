@@ -17,7 +17,7 @@ import {
   getScreenOccupancy,
 } from "../services/analyticsService";
 
-const TODAY = "2026-08-21";
+const TODAY = new Date().toISOString().slice(0, 10);
 const RANGE_OPTIONS = [
   { value: "today", label: "Today" },
   { value: "7d", label: "Last 7 days" },
