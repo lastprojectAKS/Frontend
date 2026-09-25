@@ -16,6 +16,7 @@ function isUpcomingBooking(booking) {
 
 function BookingRow({ booking, onCancelled }) {
   const { showToast } = useToast();
+  const { refreshUser } = useAuth();
   const [confirming, setConfirming] = useState(false);
   const [cancelling, setCancelling] = useState(false);
 
@@ -28,6 +29,7 @@ function BookingRow({ booking, onCancelled }) {
       await cancelBooking(booking.id);
       showToast("Booking cancelled");
       onCancelled(booking.id);
+      await refreshUser();
     } catch (err) {
       showToast(err.message || "Couldn't cancel booking. Please try again.");
       setCancelling(false);

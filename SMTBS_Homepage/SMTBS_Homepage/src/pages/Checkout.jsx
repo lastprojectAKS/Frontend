@@ -16,7 +16,7 @@ const PAYMENT_METHODS = [
 
 export default function Checkout() {
   const navigate = useNavigate();
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, refreshUser } = useAuth();
   const { selection, pricing, confirmBooking } = useBooking();
   const { movieId, cinemaId, date, time, showtimeId, seats } = selection;
 
@@ -78,6 +78,7 @@ export default function Checkout() {
         seats,
         total: booking.amount,
       });
+      await refreshUser();
       navigate("/booking/success");
     } catch (err) {
       // The most likely real failure here: someone else booked one of these

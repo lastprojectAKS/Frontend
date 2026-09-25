@@ -103,6 +103,19 @@ export function AuthProvider({ children }) {
   const openAuthModal = useCallback((mode = "login") => setAuthModal({ open: true, mode }), []);
   const closeAuthModal = useCallback(() => setAuthModal((s) => ({ ...s, open: false })), []);
 
+  // Re-fetches the current user's profile without waiting for the next auth
+  // state change — used right after an action that changes it server-side
+  // (booking/cancelling earns or reverses loyalty points) so Profile shows
+  // the new total immediately instead of only after a reload.
+  const refreshUser = useCallback(async () => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) return;
+    const profile = await fetchProfile(session.user.id);
+    setUser(toUser(session, profile));
+  }, []);
+
   const value = {
     user,
     isLoggedIn: Boolean(user),
@@ -116,6 +129,7 @@ export function AuthProvider({ children }) {
     authModal,
     openAuthModal,
     closeAuthModal,
+    refreshUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
