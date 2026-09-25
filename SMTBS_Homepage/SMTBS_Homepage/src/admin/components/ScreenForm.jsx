@@ -1,8 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Loader2, AlertTriangle } from "lucide-react";
 import Button from "../../components/ui/Button";
-import { SCREEN_TYPES } from "../data/screens";
-import { canReduceScreenCapacity } from "../lib/businessRules";
+import { SCREEN_TYPES, canReduceScreenCapacity } from "../services/cinemaService";
 
 const inputClass =
   "h-11 w-full rounded-lg border border-border-strong bg-bg-secondary px-3.5 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent";
@@ -31,26 +30,48 @@ export default function ScreenForm({ screen, onSubmit, onCancel, submitting = fa
 
   const newCapacity = Number(form.standard || 0) + Number(form.premium || 0) + Number(form.vip || 0);
 
-  const capacityCheck = useMemo(() => {
-    if (!screen) return { allowed: true, reason: null };
-    return canReduceScreenCapacity(screen.id, newCapacity);
+  // canReduceScreenCapacity now queries real showtimes, so it's async — this
+  // effect keeps a live inline warning as the admin types, but the
+  // authoritative check (avoiding any race with a stale value here) happens
+  // again inside handleSubmit right before saving.
+  const [capacityCheck, setCapacityCheck] = useState({ allowed: true, reason: null });
+  useEffect(() => {
+    if (!screen) {
+      setCapacityCheck({ allowed: true, reason: null });
+      return;
+    }
+    let cancelled = false;
+    canReduceScreenCapacity(screen.id, newCapacity).then((result) => {
+      if (!cancelled) setCapacityCheck(result);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [screen, newCapacity]);
 
-  function validate() {
+  function validateStatic() {
     const next = {};
     if (!form.name.trim()) next.name = "Screen name is required.";
     if (newCapacity <= 0) next.capacity = "At least one seat is required.";
-    if (!capacityCheck.allowed) next.capacity = capacityCheck.reason;
     return next;
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
-    const validation = validate();
+    const validation = validateStatic();
     if (Object.keys(validation).length > 0) {
       setErrors(validation);
       return;
     }
+
+    if (screen) {
+      const check = await canReduceScreenCapacity(screen.id, newCapacity);
+      if (!check.allowed) {
+        setErrors({ capacity: check.reason });
+        return;
+      }
+    }
+
     onSubmit({
       name: form.name.trim(),
       type: form.type,

@@ -8,7 +8,6 @@ import ScreenForm from "../components/ScreenForm";
 import Modal from "../../components/ui/Modal";
 import Button from "../../components/ui/Button";
 import { useToast } from "../../context/ToastContext";
-import { canDeactivateCinema } from "../lib/businessRules";
 import {
   listCinemas,
   createCinema,
@@ -16,6 +15,7 @@ import {
   listScreens,
   createScreen,
   updateScreen,
+  canDeactivateCinema,
 } from "../services/cinemaService";
 
 function ScreenCard({ screen, onEdit, onToggleActive }) {
@@ -228,8 +228,8 @@ export default function AdminCinemas() {
     await refresh();
   }
 
-  function requestDeactivate(cinema) {
-    const { warning } = canDeactivateCinema(cinema.id);
+  async function requestDeactivate(cinema) {
+    const { warning } = await canDeactivateCinema(cinema.id);
     setDeactivateTarget({ cinema, warning });
   }
 

@@ -10,8 +10,9 @@ const captionClass = "font-medium text-text-secondary";
 export default function CinemaForm({ cinema, onSubmit, onCancel, submitting = false, submitLabel = "Save cinema" }) {
   const [form, setForm] = useState({
     name: cinema?.name ?? "",
-    location: cinema?.location ?? "",
     address: cinema?.address ?? "",
+    distance: cinema?.distance ?? "",
+    amenities: cinema?.amenities?.join(", ") ?? "",
     phone: cinema?.phone ?? "",
     email: cinema?.email ?? "",
     status: cinema?.status ?? "Active",
@@ -26,7 +27,6 @@ export default function CinemaForm({ cinema, onSubmit, onCancel, submitting = fa
   function validate() {
     const next = {};
     if (!form.name.trim()) next.name = "Cinema name is required.";
-    if (!form.location.trim()) next.location = "Location is required.";
     if (!form.address.trim()) next.address = "Address is required.";
     return next;
   }
@@ -40,8 +40,12 @@ export default function CinemaForm({ cinema, onSubmit, onCancel, submitting = fa
     }
     onSubmit({
       name: form.name.trim(),
-      location: form.location.trim(),
       address: form.address.trim(),
+      distance: form.distance.trim(),
+      amenities: form.amenities
+        .split(",")
+        .map((a) => a.trim())
+        .filter(Boolean),
       phone: form.phone.trim(),
       email: form.email.trim(),
       status: form.status,
@@ -57,14 +61,8 @@ export default function CinemaForm({ cinema, onSubmit, onCancel, submitting = fa
       </label>
 
       <label className={labelClass}>
-        <span className={captionClass}>Location (short label)</span>
-        <input value={form.location} onChange={(e) => update("location", e.target.value)} placeholder="City Centre" className={inputClass} />
-        {errors.location && <span className="text-xs text-error">{errors.location}</span>}
-      </label>
-
-      <label className={labelClass}>
         <span className={captionClass}>Address</span>
-        <input value={form.address} onChange={(e) => update("address", e.target.value)} placeholder="142 Market Street" className={inputClass} />
+        <input value={form.address} onChange={(e) => update("address", e.target.value)} placeholder="142 Market Street, City Centre" className={inputClass} />
         {errors.address && <span className="text-xs text-error">{errors.address}</span>}
       </label>
 
@@ -76,6 +74,17 @@ export default function CinemaForm({ cinema, onSubmit, onCancel, submitting = fa
         <label className={labelClass}>
           <span className={captionClass}>Email</span>
           <input type="email" value={form.email} onChange={(e) => update("email", e.target.value)} className={inputClass} />
+        </label>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <label className={labelClass}>
+          <span className={captionClass}>Distance (display only)</span>
+          <input value={form.distance} onChange={(e) => update("distance", e.target.value)} placeholder="1.8 km" className={inputClass} />
+        </label>
+        <label className={labelClass}>
+          <span className={captionClass}>Amenities (comma-separated)</span>
+          <input value={form.amenities} onChange={(e) => update("amenities", e.target.value)} placeholder="IMAX, Dolby Atmos, Parking" className={inputClass} />
         </label>
       </div>
 
