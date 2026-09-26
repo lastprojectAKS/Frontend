@@ -1,4 +1,6 @@
+import { lazy, Suspense } from "react";
 import { Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 import Layout from "./components/layout/Layout";
 import Home from "./pages/Home";
 import Movies from "./pages/Movies";
@@ -16,19 +18,32 @@ import NotFound from "./pages/NotFound";
 
 import { AdminAuthProvider } from "./admin/context/AdminAuthContext";
 import ProtectedAdminRoute from "./admin/components/ProtectedAdminRoute";
-import AdminLogin from "./admin/pages/AdminLogin";
-import AdminResetPassword from "./admin/pages/AdminResetPassword";
-import AdminDashboard from "./admin/pages/Dashboard";
-import AdminMovies from "./admin/pages/Movies";
-import AdminMovieDetails from "./admin/pages/MovieDetails";
-import AdminCinemas from "./admin/pages/Cinemas";
-import AdminShowtimes from "./admin/pages/Showtimes";
-import AdminBookings from "./admin/pages/Bookings";
-import AdminBookingDetails from "./admin/pages/BookingDetails";
-import AdminCustomers from "./admin/pages/Customers";
-import AdminCustomerDetails from "./admin/pages/CustomerDetails";
-import AdminReports from "./admin/pages/Reports";
-import AdminSettings from "./admin/pages/Settings";
+
+// The entire admin portal — including Recharts, which a customer browsing
+// the main site never touches — is code-split into its own chunk. A
+// customer's first load no longer pays for any of this; an admin visiting
+// /admin/* pays a one-time chunk fetch instead.
+const AdminLogin = lazy(() => import("./admin/pages/AdminLogin"));
+const AdminResetPassword = lazy(() => import("./admin/pages/AdminResetPassword"));
+const AdminDashboard = lazy(() => import("./admin/pages/Dashboard"));
+const AdminMovies = lazy(() => import("./admin/pages/Movies"));
+const AdminMovieDetails = lazy(() => import("./admin/pages/MovieDetails"));
+const AdminCinemas = lazy(() => import("./admin/pages/Cinemas"));
+const AdminShowtimes = lazy(() => import("./admin/pages/Showtimes"));
+const AdminBookings = lazy(() => import("./admin/pages/Bookings"));
+const AdminBookingDetails = lazy(() => import("./admin/pages/BookingDetails"));
+const AdminCustomers = lazy(() => import("./admin/pages/Customers"));
+const AdminCustomerDetails = lazy(() => import("./admin/pages/CustomerDetails"));
+const AdminReports = lazy(() => import("./admin/pages/Reports"));
+const AdminSettings = lazy(() => import("./admin/pages/Settings"));
+
+function AdminChunkFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-bg-primary">
+      <Loader2 className="h-6 w-6 animate-spin text-text-muted" aria-hidden="true" />
+    </div>
+  );
+}
 
 // Single AdminAuthProvider instance shared by /admin/login and every
 // protected /admin/* route (they're all children of this one route). That
@@ -39,7 +54,9 @@ import AdminSettings from "./admin/pages/Settings";
 function AdminAuthGate() {
   return (
     <AdminAuthProvider>
-      <Outlet />
+      <Suspense fallback={<AdminChunkFallback />}>
+        <Outlet />
+      </Suspense>
     </AdminAuthProvider>
   );
 }
