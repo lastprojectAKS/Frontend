@@ -68,6 +68,47 @@ npm run build    # production build to dist/
 npm run preview  # serve the production build locally
 ```
 
+## Testing
+
+Real end-to-end tests (Playwright) against a running dev server and the real
+Supabase backend — no mocking. This is the same approach used to manually
+verify every phase of the Supabase migration during development, now checked
+into the repo as a permanent regression suite instead of one-off scripts.
+
+```bash
+npx playwright install chromium   # one-time browser download
+npm run test:e2e                  # requires the dev server running (npm run dev)
+npm run test:e2e:ui               # interactive UI mode, useful while debugging
+```
+
+What's covered (`e2e/`):
+- **`auth.spec.js`** — customer and admin login, wrong-password rejection, a
+  non-admin account correctly locked out of `/admin`.
+- **`customer-booking.spec.js`** — the full real journey: browse → pick
+  cinema/date/showtime → seat map → checkout → real booking → cancel. Books
+  and cancels a real seat every run, so it never runs out of inventory.
+- **`double-booking-guard.spec.js`** — the most important test in the suite:
+  calls `book_seats()` directly (bypassing the seat picker) for the same
+  seat twice, proving the database itself — not just the UI — rejects the
+  second attempt via the partial unique index in
+  `0007_bookings_and_seats.sql`.
+- **`admin-crud.spec.js`** — smoke-tests every migrated admin resource
+  (Dashboard, Movies, Cinemas & Screens, Showtimes, Bookings, Customers,
+  Reports) against real data.
+
+Two things worth knowing before extending this suite:
+- **Runs sequentially on purpose** (`workers: 1` in `playwright.config.js`).
+  Every spec shares one fixed test account (`tester@smtbs-test.com`) and a
+  finite seat inventory — running specs in parallel makes them race each
+  other (confirmed while building this: two specs timed out when run
+  concurrently, passed immediately once serialized).
+- **Uses a pre-confirmed account, not fresh signups.** Supabase's shared
+  email-sending has a real rate limit that repeated signup-based tests would
+  exhaust. `tester@smtbs-test.com` was created once via Supabase dashboard →
+  Authentication → Users → Add User → "Auto Confirm User" (no email sent),
+  then promoted to `super_admin` in the `profiles` table — it's used for
+  both the customer and admin test paths.
+
 ### Creating an admin account
 
 Every sign-up is a `customer` by default — nobody can grant themselves admin

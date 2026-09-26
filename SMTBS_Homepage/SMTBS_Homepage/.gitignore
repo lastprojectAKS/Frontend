@@ -3,3 +3,7 @@ dist/
 .DS_Store
 *.local
 .env
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
