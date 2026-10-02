@@ -89,7 +89,12 @@
      backgrounds, which are the lightest/worst-case background each of
      these colors appears against. */
   --color-success: #147538;
-  --color-warning: #9d6507;
+  /* Also covers the VIP seat icon's lighter bg-warning/10 tint on
+     SeatSelection, a second real background this color appears against
+     that the /15 badge-pill tint alone didn't account for — a second
+     axe pass (covering the booking flow, which the first pass's page
+     list had missed) caught it at 4.3:1. */
+  --color-warning: #966006;
   --color-error: #bf2727;
 
   --shadow-elevated: 0 8px 24px rgba(15, 17, 21, 0.12), 0 2px 8px rgba(15, 17, 21, 0.08);

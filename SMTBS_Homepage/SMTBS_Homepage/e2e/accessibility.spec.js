@@ -56,6 +56,29 @@ test.describe("Accessibility — light theme", () => {
     await page.waitForTimeout(800);
     await expectNoViolations(page);
   });
+
+  test("Seat selection (VIP seat contrast)", async ({ page }) => {
+    // This is the test that actually caught a real violation: the VIP seat
+    // icon's warning-colored text against its own bg-warning/10 tint (a
+    // *different* opacity than the /15 badge-pill tint the other warning/
+    // success/error usages share), at 4.3:1 against the required 4.5:1.
+    await loginAsCustomer(page);
+    await page.goto("/movies/dune-part-two");
+    await page.click("text=Book Tickets");
+    await page.waitForURL(/\/booking\?movie=dune-part-two/);
+    await page.waitForTimeout(700);
+    await page.click("text=SMTBS Downtown");
+    await page.waitForTimeout(700);
+    const dateSection = page.locator("section", { has: page.locator("h2", { hasText: "Select Date" }) });
+    await dateSection.locator("button").first().click();
+    await page.waitForTimeout(700);
+    const timeSection = page.locator("section", { has: page.locator("h2", { hasText: "Select Showtime" }) });
+    await timeSection.locator("button").first().click();
+    await page.click("text=Continue to Seats");
+    await page.waitForURL(/\/booking\/seats/, { timeout: 8000 });
+    await page.waitForTimeout(1000);
+    await expectNoViolations(page);
+  });
 });
 
 test.describe("Accessibility — dark theme", () => {
