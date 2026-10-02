@@ -111,6 +111,11 @@ What's covered (`e2e/`):
 - **`admin-crud.spec.js`** — smoke-tests every migrated admin resource
   (Dashboard, Movies, Cinemas & Screens, Showtimes, Bookings, Customers,
   Reports) against real data.
+- **`accessibility.spec.js`** — automated WCAG 2 A/AA checks (axe-core)
+  across representative pages in both themes. This is what actually found
+  every color-contrast fix in `src/index.css` — several brand/semantic
+  colors cleared 4.5:1 against a plain background but fell short against
+  their own 15%-opacity badge-pill backgrounds, the real worst case.
 
 Two things worth knowing before extending this suite:
 - **Runs sequentially on purpose** (`workers: 1` in `playwright.config.js`).
