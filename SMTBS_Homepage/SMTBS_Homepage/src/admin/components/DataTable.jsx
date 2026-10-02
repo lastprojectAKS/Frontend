@@ -34,7 +34,7 @@ export default function DataTable({
 
   return (
     <div className="overflow-hidden rounded-2xl border border-border bg-surface">
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Scrollable table">
         <table className="w-full min-w-max text-left text-sm">
           <thead>
             <tr className="border-b border-border bg-surface-hover/60">

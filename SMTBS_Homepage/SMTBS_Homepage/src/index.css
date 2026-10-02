@@ -23,13 +23,18 @@
   --color-accent-hover: #f43f5e;
   /* Lighter variant for accent-colored text on dark backgrounds — #e11d48
      itself only hits ~4.2:1 on these surfaces, short of WCAG AA (4.5:1) for
-     text. Use this for labels/prices; keep --color-accent for buttons. */
-  --color-accent-text: #e64669;
+     text. Use this for labels/prices; keep --color-accent for buttons.
+     axe-core found even this lighter value still fell short (~4.1:1) on
+     the lightest real case it appears against — a 15%-opacity accent
+     badge pill — so it's lightened further still, with margin, verified
+     against every real page in both themes. */
+  --color-accent-text: #e95a79;
 
-  /* Semantic */
+  /* Semantic. error is lightened the same way as accent-text above — its
+     own /15 badge-pill background is the worst case, not plain text. */
   --color-success: #22c55e;
   --color-warning: #f59e0b;
-  --color-error: #ef4444;
+  --color-error: #f15e5e;
 
   --shadow-elevated: 0 8px 24px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.3);
   --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.35);
@@ -47,9 +52,14 @@
  * so light mode uses darker variants of those specific tokens. text-muted
  * and text-secondary are also pushed well past the 4.5:1 AA minimum (to
  * ~7.2:1 and ~10.4:1) rather than just clearing it — the bare minimum read
- * as washed out next to dark mode's much punchier contrast. Verified
- * against white: muted 7.16:1, secondary 10.44:1, accent-text/success/
- * warning all ~4.65-4.70:1.
+ * as washed out next to dark mode's much punchier contrast.
+ *
+ * accent-text/success/warning/error are darkened further still (see each
+ * property below) — an automated axe-core audit found the values that
+ * cleared 4.5:1 on a plain page background still fell short (~3.3-3.8:1)
+ * on the lightest real background they actually appear against: a
+ * 15%-opacity badge pill of the same color. Verified with axe, not just
+ * hand-computed, against every real page in the app, both themes.
  */
 :root[data-theme="light"] {
   --color-bg-primary: #f8fafc;
@@ -66,11 +76,21 @@
 
   --color-accent: #e11d48;
   --color-accent-hover: #f43f5e;
-  --color-accent-text: #e11d48;
+  /* Darker than --color-accent itself — axe-verified against every real
+     background accent-text renders on in light mode, including the
+     lightest case (a 15%-opacity accent badge pill, e.g. the admin
+     sidebar's active-link highlight and the "X% OFF" offer badges),
+     not just plain page backgrounds. #e11d48 cleared 4.5:1 on a flat
+     page background but only hit ~3.3:1 against that badge tint. */
+  --color-accent-text: #b8183b;
 
-  --color-success: #178640;
-  --color-warning: #a26807;
-  --color-error: #d73d3d;
+  /* Same reasoning as accent-text: darkened past what plain-background
+     text alone would need, to also clear badge-pill (15%-opacity tint)
+     backgrounds, which are the lightest/worst-case background each of
+     these colors appears against. */
+  --color-success: #147538;
+  --color-warning: #9d6507;
+  --color-error: #bf2727;
 
   --shadow-elevated: 0 8px 24px rgba(15, 17, 21, 0.12), 0 2px 8px rgba(15, 17, 21, 0.08);
   --shadow-card: 0 4px 16px rgba(15, 17, 21, 0.08);
@@ -142,11 +162,11 @@
 
     --color-accent: #e11d48;
     --color-accent-hover: #f43f5e;
-    --color-accent-text: #e64669;
+    --color-accent-text: #e95a79;
 
     --color-success: #22c55e;
     --color-warning: #f59e0b;
-    --color-error: #ef4444;
+    --color-error: #f15e5e;
 
     --shadow-elevated: 0 8px 24px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.3);
     --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.35);
