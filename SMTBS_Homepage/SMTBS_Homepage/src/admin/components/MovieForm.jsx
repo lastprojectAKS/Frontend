@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Loader2, Plus, X } from "lucide-react";
 import Button from "../../components/ui/Button";
-import { MOVIE_STATUSES } from "../services/movieService";
+import { MOVIE_STATUSES, uploadMovieImage } from "../services/movieService";
 import { PLACEHOLDER_POSTER } from "../lib/placeholder";
 
 const AGE_RATINGS = ["G", "PG", "PG-13", "R", "NC-17"];
@@ -10,6 +10,80 @@ const inputClass =
   "h-11 w-full rounded-lg border border-border-strong bg-bg-secondary px-3.5 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent";
 const labelClass = "flex flex-col gap-1.5 text-sm";
 const captionClass = "font-medium text-text-secondary";
+
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+
+// URL field stays editable (pasting a link to an already-hosted image is
+// still the fastest path for, say, a poster pulled from a press kit) —
+// "Upload image" is an alternative way to fill the same field, not a
+// replacement for it. Not wrapped in a single <label>, since it has two
+// separately-focusable controls (the URL input and the upload button);
+// only the URL input gets an explicit htmlFor association.
+function ImageUploadField({ id, label, value, onChange, placeholder }) {
+  const fileInputRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleFileChange(e) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // so picking the same file again still fires onChange
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setError("Please choose an image file.");
+      return;
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      setError("Image must be under 5MB.");
+      return;
+    }
+
+    setError("");
+    setUploading(true);
+    try {
+      const url = await uploadMovieImage(file);
+      onChange(url);
+    } catch (err) {
+      setError(err.message || "Upload failed. Please try again.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-1.5 text-sm">
+      <label htmlFor={id} className={captionClass}>
+        {label}
+      </label>
+      <div className="flex items-start gap-3">
+        <div className="h-14 w-10 shrink-0 overflow-hidden rounded-lg border border-border-strong bg-bg-secondary">
+          {value && <img src={value} alt="" className="h-full w-full object-cover" />}
+        </div>
+        <div className="flex flex-1 flex-col gap-1.5">
+          <input
+            id={id}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={placeholder}
+            className={inputClass}
+          />
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="text-xs font-semibold text-accent-text hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {uploading ? "Uploading..." : "Upload image"}
+            </button>
+            {error && <span className="text-xs text-error">{error}</span>}
+          </div>
+        </div>
+      </div>
+      <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+    </div>
+  );
+}
 
 function toFormState(movie) {
   return {
@@ -116,24 +190,20 @@ export default function MovieForm({ movie, onSubmit, onCancel, submitting = fals
       </label>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <label className={labelClass}>
-          <span className={captionClass}>Poster URL</span>
-          <input
-            value={form.poster}
-            onChange={(e) => update("poster", e.target.value)}
-            placeholder="/images/movie.jpg"
-            className={inputClass}
-          />
-        </label>
-        <label className={labelClass}>
-          <span className={captionClass}>Backdrop URL</span>
-          <input
-            value={form.backdrop}
-            onChange={(e) => update("backdrop", e.target.value)}
-            placeholder="Defaults to poster"
-            className={inputClass}
-          />
-        </label>
+        <ImageUploadField
+          id="movie-poster"
+          label="Poster"
+          value={form.poster}
+          onChange={(value) => update("poster", value)}
+          placeholder="/images/movie.jpg"
+        />
+        <ImageUploadField
+          id="movie-backdrop"
+          label="Backdrop"
+          value={form.backdrop}
+          onChange={(value) => update("backdrop", value)}
+          placeholder="Defaults to poster"
+        />
       </div>
 
       <label className={labelClass}>

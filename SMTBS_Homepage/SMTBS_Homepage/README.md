@@ -44,6 +44,11 @@ Dashboard & Reports) — reads and writes the real Supabase tables in
   Stripe confirms the charge was actually reversed. (Bookings that predate
   Stripe have no `payment_intent_id`, so they just get the plain status
   flip, same as before.)
+- Real image uploads — the admin Movie form's Poster/Backdrop fields have an
+  "Upload image" option alongside the plain URL field, backed by a public
+  Supabase Storage bucket (`movie-images`, `supabase/migrations/0015`) with
+  admin-only write access (same `is_admin()` check every other admin write
+  uses) and a 5MB/image-only limit enforced by the bucket itself.
 
 What's honestly not built, rather than faked:
 - Phone number sign-in is scaffolded (`AuthContext.sendPhoneOtp` /

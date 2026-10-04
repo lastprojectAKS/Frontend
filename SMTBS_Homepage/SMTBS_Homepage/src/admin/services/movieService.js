@@ -107,3 +107,18 @@ export async function deleteMovie(id) {
 export async function setMovieStatus(id, status) {
   return updateMovie(id, { status });
 }
+
+// Uploads to the public movie-images bucket (supabase/migrations/0015) under
+// a random filename, independent of the movie's own id/slug — the upload
+// can happen while filling out the "Add movie" form, before a title (and
+// therefore a slug) is finalized. Returns the public URL to store directly
+// on movies.poster / movies.backdrop; there's no FK between the two, so a
+// deleted/replaced image doesn't need any cleanup of the movies row.
+export async function uploadMovieImage(file) {
+  const ext = file.name.split(".").pop();
+  const path = `${crypto.randomUUID()}.${ext}`;
+  const { error } = await supabase.storage.from("movie-images").upload(path, file, { cacheControl: "3600" });
+  if (error) throw error;
+  const { data } = supabase.storage.from("movie-images").getPublicUrl(path);
+  return data.publicUrl;
+}
