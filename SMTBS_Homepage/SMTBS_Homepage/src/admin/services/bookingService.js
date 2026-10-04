@@ -55,24 +55,19 @@ export async function cancelBooking(id) {
   return getBooking(id);
 }
 
-// A refund is a cancellation (same seat-release/occupancy logic) plus a
-// distinct terminal status the plain cancel_booking() RPC doesn't set on
-// its own — so this calls it first, then flips both statuses to Refunded
-// via a direct update, which bookings_admin_update's RLS policy allows.
+// A refund is a cancellation (same seat-release/occupancy logic) plus
+// actually returning the customer's money. For a booking paid through
+// Stripe, that only the refund-booking Edge Function can do — it holds the
+// Stripe secret key, re-verifies admin status server-side, and only flips
+// the DB to Refunded once Stripe confirms the charge was actually reversed
+// (or finds it already was, on a retry). See its own comments for why the
+// admin check can't be left to RLS alone here. Bookings that predate
+// Stripe (no payment_intent_id) just get the same status flip as before.
 export async function refundBooking(id) {
-  const existing = await getBooking(id);
-  if (existing.paymentStatus !== "Paid") {
-    throw new Error("Only paid bookings can be refunded.");
-  }
-
-  const { error: cancelError } = await supabase.rpc("cancel_booking", { p_booking_id: id });
-  if (cancelError) throw new Error(cancelError.message);
-
-  const { error: updateError } = await supabase
-    .from("bookings")
-    .update({ payment_status: "Refunded", booking_status: "Refunded" })
-    .eq("id", id);
-  if (updateError) throw updateError;
-
+  const { data, error } = await supabase.functions.invoke("refund-booking", {
+    body: { bookingId: id },
+  });
+  if (error) throw new Error(error.message || "Could not process the refund.");
+  if (data?.error) throw new Error(data.error);
   return getBooking(id);
 }

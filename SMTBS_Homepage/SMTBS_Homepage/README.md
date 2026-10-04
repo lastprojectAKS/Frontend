@@ -38,6 +38,12 @@ Dashboard & Reports) — reads and writes the real Supabase tables in
   re-verifies the charge directly with Stripe (never trusting the client's
   own "it succeeded" claim) before calling `book_seats()`. See "Payments"
   below for setup and test card numbers.
+- Real Stripe refunds — an admin's "Refund" action calls a third Edge
+  Function (`refund-booking`) that re-checks admin status server-side, then
+  calls Stripe's refund API, and only flips the booking to `Refunded` once
+  Stripe confirms the charge was actually reversed. (Bookings that predate
+  Stripe have no `payment_intent_id`, so they just get the plain status
+  flip, same as before.)
 
 What's honestly not built, rather than faked:
 - Phone number sign-in is scaffolded (`AuthContext.sendPhoneOtp` /
@@ -120,13 +126,12 @@ test-mode keys.
    anyone can read.
 3. Run `supabase/migrations/0014_stripe_payment_intents.sql` via the
    Supabase SQL Editor, same as every other migration in this project.
-4. Deploy the two new Edge Functions
-   (`supabase/functions/create-payment-intent`,
-   `supabase/functions/confirm-booking`) — via the Supabase Dashboard's
-   Edge Functions editor if it supports pasting the code directly, or via
-   the Supabase CLI (`supabase login`, `supabase link --project-ref <ref>`,
-   `supabase functions deploy create-payment-intent`,
-   `supabase functions deploy confirm-booking`) otherwise.
+4. Deploy the three Edge Functions (`supabase/functions/create-payment-intent`,
+   `supabase/functions/confirm-booking`, `supabase/functions/refund-booking`)
+   — via the Supabase Dashboard's Edge Functions editor if it supports
+   pasting the code directly, or via the Supabase CLI (`supabase login`,
+   `supabase link --project-ref <ref>`, then `supabase functions deploy
+   <name>` for each) otherwise.
 5. Set the `STRIPE_SECRET_KEY` secret on the Supabase project to your
    `sk_test_...` value (Supabase Dashboard → Edge Functions → Secrets).
 6. Test with Stripe's standard test cards — any future expiry date, any
@@ -166,6 +171,11 @@ What's covered (`e2e/`):
 - **`admin-crud.spec.js`** — smoke-tests every migrated admin resource
   (Dashboard, Movies, Cinemas & Screens, Showtimes, Bookings, Customers,
   Reports) against real data.
+- **`admin-refund.spec.js`** — books and pays for a real seat, then refunds
+  it from the admin panel, asserting the UI only ever reaches "Refunded" if
+  the `refund-booking` Edge Function's real Stripe refund call succeeded
+  (a Stripe failure there returns an inline error instead). Requires Stripe
+  test-mode credentials configured to pass at all.
 - **`accessibility.spec.js`** — automated WCAG 2 A/AA checks (axe-core)
   across representative pages in both themes. This is what actually found
   every color-contrast fix in `src/index.css` — several brand/semantic
