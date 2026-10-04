@@ -95,7 +95,9 @@ export default function BookingSuccess() {
         </div>
       </div>
 
-      <p className="mt-4 text-xs text-text-muted">This booking is saved to your account — payment itself is still simulated.</p>
+      <p className="mt-4 text-xs text-text-muted">
+        This booking is saved to your account — paid via Stripe (test mode), no real charge occurred.
+      </p>
 
       <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
         <Button variant="secondary" icon={Download}>

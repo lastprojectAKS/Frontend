@@ -31,6 +31,13 @@ Dashboard & Reports) — reads and writes the real Supabase tables in
   real tables, backed by real database constraints (an `EXCLUDE USING gist`
   constraint makes an overlapping showtime impossible to insert regardless of
   what the client checks).
+- Real Stripe payments (test mode) — Checkout uses Stripe's `PaymentElement`,
+  so the client never touches raw card numbers. A Supabase Edge Function
+  computes the authoritative price server-side and creates the
+  PaymentIntent; after the card is charged, a second Edge Function
+  re-verifies the charge directly with Stripe (never trusting the client's
+  own "it succeeded" claim) before calling `book_seats()`. See "Payments"
+  below for setup and test card numbers.
 
 What's honestly not built, rather than faked:
 - Phone number sign-in is scaffolded (`AuthContext.sendPhoneOtp` /
@@ -40,6 +47,20 @@ What's honestly not built, rather than faked:
   date format) are local-only — there's no notification system or per-admin
   preference concept anywhere else in the app to persist them against.
   Settings' actual account fields (profile name, password) are real.
+- Payment confirmation is synchronous, not webhook-backed: if the connection
+  drops between Stripe confirming a charge and the `confirm-booking` Edge
+  Function finishing, the card is charged but no booking is created. Not
+  auto-reconciled — recoverable manually via a refund in the Stripe
+  Dashboard. A webhook would close this gap but adds real complexity
+  (signature verification, a pending-booking/seat-hold state machine) for a
+  risk window of a few seconds; deliberately out of scope for now.
+- `book_seats()` is still callable directly by any authenticated client
+  (e.g. from the browser console) with a fabricated `payment_intent_id`,
+  bypassing Stripe entirely — the same trust model it always had, since it
+  alone *was* the entire booking flow before Stripe was added. Closing this
+  for real would mean calling it with the service-role key and an explicit
+  customer id instead of the caller's own JWT, which is a bigger change than
+  this pass makes.
 
 ## Stack
 
@@ -84,6 +105,38 @@ npm run build    # production build to dist/
 npm run preview  # serve the production build locally
 ```
 
+## Payments
+
+Real Stripe integration, test mode only — no live charges are possible with
+test-mode keys.
+
+1. Create a free Stripe account at [stripe.com](https://stripe.com). Stay in
+   **Test mode** (toggle in the Stripe Dashboard) — no business verification
+   is needed to get test-mode keys.
+2. Developers → API keys. Copy the **Publishable key** (`pk_test_...`) into
+   `.env` as `VITE_STRIPE_PUBLISHABLE_KEY`. Copy the **Secret key**
+   (`sk_test_...`) too, but don't put it in `.env` or any other
+   `VITE_`-prefixed variable — Vite bundles those into client-side JS that
+   anyone can read.
+3. Run `supabase/migrations/0014_stripe_payment_intents.sql` via the
+   Supabase SQL Editor, same as every other migration in this project.
+4. Deploy the two new Edge Functions
+   (`supabase/functions/create-payment-intent`,
+   `supabase/functions/confirm-booking`) — via the Supabase Dashboard's
+   Edge Functions editor if it supports pasting the code directly, or via
+   the Supabase CLI (`supabase login`, `supabase link --project-ref <ref>`,
+   `supabase functions deploy create-payment-intent`,
+   `supabase functions deploy confirm-booking`) otherwise.
+5. Set the `STRIPE_SECRET_KEY` secret on the Supabase project to your
+   `sk_test_...` value (Supabase Dashboard → Edge Functions → Secrets).
+6. Test with Stripe's standard test cards — any future expiry date, any
+   3-digit CVC, any postcode:
+   - `4242 4242 4242 4242` — succeeds immediately, no challenge.
+   - `4000 0025 0000 3155` — triggers a 3D Secure authentication challenge.
+   - `4000 0000 0000 0002` — a hard decline.
+
+   Full list: [Stripe's testing docs](https://stripe.com/docs/testing).
+
 ## Testing
 
 Real end-to-end tests (Playwright) against a running dev server and the real
@@ -101,8 +154,10 @@ What's covered (`e2e/`):
 - **`auth.spec.js`** — customer and admin login, wrong-password rejection, a
   non-admin account correctly locked out of `/admin`.
 - **`customer-booking.spec.js`** — the full real journey: browse → pick
-  cinema/date/showtime → seat map → checkout → real booking → cancel. Books
-  and cancels a real seat every run, so it never runs out of inventory.
+  cinema/date/showtime → seat map → checkout → a real Stripe test-mode
+  payment → real booking → cancel. Books and cancels a real seat every run,
+  so it never runs out of inventory. Requires Stripe test-mode credentials
+  configured (see "Payments" above) to pass at all.
 - **`double-booking-guard.spec.js`** — the most important test in the suite:
   calls `book_seats()` directly (bypassing the seat picker) for the same
   seat twice, proving the database itself — not just the UI — rejects the
@@ -158,14 +213,16 @@ src/
     booking/   Seat, SeatMap, BookingSummary
   pages/       One component per customer-facing route (see below)
   services/    Real Supabase queries/RPCs — movies, cinemas, offers, showtimes,
-               seats, bookings (book_seats / cancel_booking), favourites
+               seats, bookings (book_seats / cancel_booking), favourites,
+               paymentService.js (create-payment-intent / confirm-booking
+               Edge Function calls)
   context/     AuthContext (real Supabase session, password reset, profile
                refresh), FavouritesContext (shared favourited-movie-id set),
                BookingContext (in-progress booking state across the multi-page
                flow), ThemeContext, ToastContext
-  lib/         supabaseClient.js, constants.js (BOOKING_FEE — kept in sync with
-               the flat fee in book_seats()), formatting helpers (duration,
-               currency, date)
+  lib/         supabaseClient.js, stripeClient.js, constants.js (BOOKING_FEE —
+               kept in sync with the flat fee in book_seats()), formatting
+               helpers (duration, currency, date)
 
 src/admin/     Isolated admin portal — its own auth, layout, and real data services
   pages/       Dashboard, Movies, Cinemas & Screens, Showtimes, Bookings,
@@ -182,6 +239,8 @@ src/admin/     Isolated admin portal — its own auth, layout, and real data ser
 
 supabase/
   migrations/  SQL migrations, run in order against your Supabase project
+  functions/   Edge Functions (Deno) — create-payment-intent and
+               confirm-booking, the server-side half of the Stripe flow
 
 e2e/           Playwright end-to-end tests against the real backend (see Testing)
 ```

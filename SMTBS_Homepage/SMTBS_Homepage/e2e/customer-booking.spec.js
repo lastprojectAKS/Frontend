@@ -7,12 +7,17 @@ import { loginAsCustomer } from "./helpers.js";
 // showtime, and don't leave a trail of real bookings behind).
 test("a customer can browse, book a real seat, and cancel it", async ({ page }) => {
   // This walks the full real journey against a live backend — login, movie,
-  // cinema, date, showtime, seat map, book_seats(), profile, cancel_booking()
-  // — around a dozen real network round-trips. The default 30s budget is
+  // cinema, date, showtime, seat map, a real Stripe test-mode payment,
+  // book_seats(), profile, cancel_booking() — around a dozen real network
+  // round-trips plus two Edge Function calls. The default 30s budget is
   // tight enough that a single slower Supabase round-trip can tip it over
   // even when every step succeeds (confirmed once: final state was fully
-  // correct, just past the timeout).
-  test.setTimeout(60_000);
+  // correct, just past the timeout) — bumped further for the two extra
+  // Edge Function round-trips (possible cold start on Supabase's free tier).
+  // Requires real Stripe test-mode credentials configured both locally
+  // (VITE_STRIPE_PUBLISHABLE_KEY) and on the linked Supabase project
+  // (STRIPE_SECRET_KEY secret) — see README's "Payments" section.
+  test.setTimeout(75_000);
 
   await loginAsCustomer(page);
 
@@ -46,12 +51,31 @@ test("a customer can browse, book a real seat, and cancel it", async ({ page }) 
   await page.fill('input[type="text"][placeholder="class project"]', "E2E Test");
   await page.fill('input[type="email"]', "e2e-checkout@smtbs-test.com");
   await page.fill('input[type="tel"]', "5551234567");
-  await page.fill('input[placeholder="4242 4242 4242 4242"]', "4242424242424242");
-  await page.fill('input[placeholder="MM/YY"]', "12/28");
-  await page.fill('input[placeholder="123"]', "123");
-  await page.click("text=Complete Booking");
-  await page.waitForURL(/\/booking\/success/, { timeout: 10000 });
+
+  // Stripe's PaymentElement renders card fields inside a cross-origin
+  // iframe (served from js.stripe.com) — Playwright can't fill these with
+  // plain page.fill(). Verified empirically against a real render with real
+  // Stripe test keys: with automatic_payment_methods enabled on an AUD
+  // PaymentIntent, Stripe shows an accordion of methods (Card/Klarna/Zip,
+  // etc. — varies by what the Stripe account has enabled) and "Card" must
+  // be expanded before its number/expiry/cvc inputs exist in the DOM. All
+  // three fields live in the same iframe, named "number"/"expiry"/"cvc".
+  // This iframe name/structure is still not a stable public Stripe API —
+  // if this test starts failing to find these locators after a Stripe.js
+  // upgrade, re-verify with `page.pause()` right after PaymentElement
+  // mounts rather than assuming the selectors below are still accurate.
+  await page.waitForTimeout(3000); // let PaymentElement finish mounting
+  const stripeFrame = page.frameLocator('iframe[name^="__privateStripeFrame"]').first();
+  await stripeFrame.getByText("Card", { exact: true }).click();
   await page.waitForTimeout(1000);
+  await stripeFrame.locator('input[name="number"]').fill("4242424242424242");
+  await stripeFrame.locator('input[name="expiry"]').fill("1234");
+  await stripeFrame.locator('input[name="cvc"]').fill("123");
+  await page.waitForTimeout(500);
+
+  await page.click("text=Complete Booking");
+  await page.waitForURL(/\/booking\/success/, { timeout: 25000 });
+  await page.waitForTimeout(2000);
 
   const successBody = await page.textContent("body");
   expect(successBody).toMatch(/BK-\d{5}/);

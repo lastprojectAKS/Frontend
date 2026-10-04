@@ -1,31 +1,26 @@
 import { useState, useEffect } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
-import { CreditCard, Apple, Wallet, Lock, AlertCircle, Loader2 } from "lucide-react";
+import { Lock, AlertCircle, Loader2 } from "lucide-react";
+import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import BookingSummary from "../components/booking/BookingSummary";
 import { useBooking } from "../context/BookingContext";
 import { useAuth } from "../context/AuthContext";
 import { getMovie } from "../services/movieService";
 import { getCinema } from "../services/cinemaService";
-import { bookSeats } from "../services/bookingService";
-
-const PAYMENT_METHODS = [
-  { id: "card", label: "Card", icon: CreditCard },
-  { id: "apple-pay", label: "Apple Pay", icon: Apple },
-  { id: "google-pay", label: "Google Pay", icon: Wallet },
-];
+import { createPaymentIntent, confirmBookingAfterPayment } from "../services/paymentService";
+import { stripePromise } from "../lib/stripeClient";
 
 export default function Checkout() {
   const navigate = useNavigate();
-  const { isLoggedIn, refreshUser } = useAuth();
-  const { selection, pricing, confirmBooking } = useBooking();
+  const { isLoggedIn } = useAuth();
+  const { selection, pricing } = useBooking();
   const { movieId, cinemaId, date, time, showtimeId, seats } = selection;
 
   const [movie, setMovie] = useState(null);
   const [cinema, setCinema] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [paymentMethod, setPaymentMethod] = useState("card");
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState("");
+  const [clientSecret, setClientSecret] = useState(null);
+  const [intentError, setIntentError] = useState("");
 
   const hasSelection = Boolean(movieId && cinemaId && date && time && showtimeId && seats.length > 0);
 
@@ -48,6 +43,22 @@ export default function Checkout() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasSelection, movieId, cinemaId]);
 
+  useEffect(() => {
+    if (!hasSelection || !stripePromise) return;
+    let cancelled = false;
+    createPaymentIntent(showtimeId, seats)
+      .then((secret) => {
+        if (!cancelled) setClientSecret(secret);
+      })
+      .catch((err) => {
+        if (!cancelled) setIntentError(err.message || "Could not start payment. Please try again.");
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasSelection, showtimeId, seats]);
+
   if (!isLoggedIn || !hasSelection) {
     return <Navigate to="/booking" replace />;
   }
@@ -62,13 +73,89 @@ export default function Checkout() {
 
   if (!movie || !cinema) return <Navigate to="/booking" replace />;
 
+  if (!stripePromise) {
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6 lg:px-8">
+        <div className="flex items-start gap-2 rounded-xl border border-error/30 bg-error/10 px-4 py-3 text-sm text-error">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          <p>
+            Payments aren't configured yet — set <code>VITE_STRIPE_PUBLISHABLE_KEY</code> in <code>.env</code> (see the
+            README's "Payments" section).
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (intentError) {
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6 lg:px-8">
+        <div className="flex items-start gap-2 rounded-xl border border-error/30 bg-error/10 px-4 py-3 text-sm text-error">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          <div>
+            <p>{intentError}</p>
+            <button
+              type="button"
+              onClick={() => navigate("/booking/seats")}
+              className="mt-1 font-semibold underline underline-offset-2"
+            >
+              Choose different seats
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!clientSecret) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-text-muted" aria-hidden="true" />
+      </div>
+    );
+  }
+
+  return (
+    <Elements stripe={stripePromise} options={{ clientSecret }}>
+      <CheckoutForm movie={movie} cinema={cinema} date={date} time={time} seats={seats} pricing={pricing} />
+    </Elements>
+  );
+}
+
+function CheckoutForm({ movie, cinema, date, time, seats, pricing }) {
+  const navigate = useNavigate();
+  const { refreshUser } = useAuth();
+  const { confirmBooking } = useBooking();
+  const stripe = useStripe();
+  const elements = useElements();
+
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
   async function handleSubmit(e) {
     e.preventDefault();
+    if (!stripe || !elements) return;
     setSubmitting(true);
     setError("");
 
+    const { error: stripeError, paymentIntent } = await stripe.confirmPayment({
+      elements,
+      redirect: "if_required",
+    });
+
+    if (stripeError) {
+      setError(stripeError.message || "Payment failed. Please check your card details and try again.");
+      setSubmitting(false);
+      return;
+    }
+    if (paymentIntent.status !== "succeeded") {
+      setError("Payment was not completed. Please try again.");
+      setSubmitting(false);
+      return;
+    }
+
     try {
-      const booking = await bookSeats(showtimeId, seats);
+      const booking = await confirmBookingAfterPayment(paymentIntent.id);
       confirmBooking({
         bookingCode: booking.booking_code,
         movieId: movie.id,
@@ -81,9 +168,10 @@ export default function Checkout() {
       await refreshUser();
       navigate("/booking/success");
     } catch (err) {
-      // The most likely real failure here: someone else booked one of these
-      // seats between selection and now (no seat hold exists). Send them
-      // back to pick different seats rather than retrying blindly.
+      // The payment succeeded but the booking itself failed (most likely the
+      // seat-race case — someone else booked one of these seats while the
+      // card was being charged). confirm-booking refunds the charge before
+      // returning this error, so the customer isn't out of pocket for it.
       setError(err.message || "Something went wrong. Please try again.");
       setSubmitting(false);
     }
@@ -150,66 +238,11 @@ export default function Checkout() {
           <section className="rounded-2xl border border-border bg-surface p-6">
             <h2 className="mb-4 text-lg font-bold text-text-primary">Payment Method</h2>
 
-            <div className="mb-5 grid grid-cols-3 gap-2">
-              {PAYMENT_METHODS.map(({ id, label, icon: Icon }) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => setPaymentMethod(id)}
-                  aria-pressed={paymentMethod === id}
-                  className={`flex flex-col items-center gap-1.5 rounded-xl border p-3 text-xs font-semibold transition-colors ${
-                    paymentMethod === id
-                      ? "border-accent bg-accent/10 text-accent-text"
-                      : "border-border-strong bg-bg-secondary text-text-secondary hover:text-text-primary"
-                  }`}
-                >
-                  <Icon className="h-5 w-5" aria-hidden="true" />
-                  {label}
-                </button>
-              ))}
-            </div>
-
-            {paymentMethod === "card" ? (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <label className="flex flex-col gap-1.5 text-sm sm:col-span-2">
-                  <span className="font-medium text-text-secondary">Card Number</span>
-                  <input
-                    required
-                    type="text"
-                    inputMode="numeric"
-                    placeholder="4242 4242 4242 4242"
-                    className="h-11 rounded-lg border border-border-strong bg-bg-secondary px-3.5 font-mono text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent"
-                  />
-                </label>
-                <label className="flex flex-col gap-1.5 text-sm">
-                  <span className="font-medium text-text-secondary">Expiry</span>
-                  <input
-                    required
-                    type="text"
-                    placeholder="MM/YY"
-                    className="h-11 rounded-lg border border-border-strong bg-bg-secondary px-3.5 text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent"
-                  />
-                </label>
-                <label className="flex flex-col gap-1.5 text-sm">
-                  <span className="font-medium text-text-secondary">CVC</span>
-                  <input
-                    required
-                    type="text"
-                    inputMode="numeric"
-                    placeholder="123"
-                    className="h-11 rounded-lg border border-border-strong bg-bg-secondary px-3.5 text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent"
-                  />
-                </label>
-              </div>
-            ) : (
-              <div className="rounded-xl border border-dashed border-border-strong bg-bg-secondary p-6 text-center text-sm text-text-secondary">
-                You'll be prompted to confirm payment with {paymentMethod === "apple-pay" ? "Apple Pay" : "Google Pay"} in a real integration.
-              </div>
-            )}
+            <PaymentElement />
 
             <p className="mt-4 flex items-center gap-1.5 text-xs text-text-muted">
               <Lock className="h-3.5 w-3.5" aria-hidden="true" />
-              This is a demo checkout — payment isn't real, but the booking and seats are.
+              Test mode — use Stripe's test card 4242 4242 4242 4242, any future expiry, any CVC. No real charge occurs.
             </p>
           </section>
         </div>
@@ -224,7 +257,7 @@ export default function Checkout() {
               seats={seats}
               pricing={pricing}
               ctaLabel={submitting ? "Processing..." : "Complete Booking"}
-              ctaDisabled={submitting}
+              ctaDisabled={submitting || !stripe || !elements}
               ctaType="submit"
             />
           </div>

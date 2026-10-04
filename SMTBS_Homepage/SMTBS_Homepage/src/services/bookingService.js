@@ -1,14 +1,5 @@
 import { supabase } from "../lib/supabaseClient";
 
-export async function bookSeats(showtimeId, seatLabels) {
-  const { data, error } = await supabase.rpc("book_seats", {
-    p_showtime_id: showtimeId,
-    p_seat_labels: seatLabels,
-  });
-  if (error) throw new Error(error.message);
-  return data;
-}
-
 // Releases the booking's seats (freeing them for resale) and marks the
 // booking Cancelled. Runs as the cancel_booking() security-definer RPC so
 // the seat release and the booked_seats decrement happen atomically with
