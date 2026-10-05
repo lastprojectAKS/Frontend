@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { loginAsCustomer, selectDateWithShowtime } from "./helpers.js";
+import { loginAsCustomer, selectDateWithShowtime, enterAdminCodeIfAsked } from "./helpers.js";
 
 // Guards a real bug: before the refund-booking Edge Function existed, the
 // admin "Refund" button just flipped payment_status/booking_status to
@@ -75,9 +75,14 @@ test("admin refund actually reverses the Stripe charge, not just the DB status",
   // Same account is both customer and admin — it already has a session, so
   // go straight to the admin area rather than through /admin/login (which
   // would just redirect past the login form since it's already signed in).
+  await page.goto("/admin/login");
+  await enterAdminCodeIfAsked(page);
+  await page.waitForURL(/\/admin\/dashboard/, { timeout: 8000 });
   await page.goto("/admin/bookings");
   await page.waitForTimeout(1200);
-  await page.getByText(bookingCode).click();
+  await page.getByPlaceholder("Search by booking ID, customer, movie...").fill(bookingCode);
+  await page.waitForTimeout(800);
+  await page.getByText(bookingCode).first().click();
   await page.waitForTimeout(1000);
 
   await expect(page.getByText("Paid", { exact: true }).first()).toBeVisible();

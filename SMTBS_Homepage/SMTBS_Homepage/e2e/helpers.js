@@ -2,6 +2,7 @@
 // Playwright doesn't allow multiple spec files to import from another spec
 // file (it treats every *.spec.js as a standalone entry point).
 import fs from "fs";
+import crypto from "crypto";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -16,6 +17,7 @@ export function loadEnv() {
       VITE_SUPABASE_URL: process.env.VITE_SUPABASE_URL,
       VITE_SUPABASE_ANON_KEY: process.env.VITE_SUPABASE_ANON_KEY,
       SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+      TEST_ADMIN_TOTP_SECRET: process.env.TEST_ADMIN_TOTP_SECRET,
     };
   }
   const text = fs.readFileSync(path.join(__dirname, "..", ".env"), "utf8");
@@ -61,11 +63,42 @@ export async function loginAsCustomer(page) {
   await page.waitForTimeout(1000);
 }
 
+// Standard 6-digit authenticator code (RFC 6238, 30-second steps).
+export function totpCode(secret, now = Date.now()) {
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+  let bits = "";
+  for (const ch of secret.replace(/=+$/, "").toUpperCase()) {
+    const value = alphabet.indexOf(ch);
+    if (value >= 0) bits += value.toString(2).padStart(5, "0");
+  }
+  const key = Buffer.alloc(Math.floor(bits.length / 8));
+  for (let i = 0; i < key.length; i++) key[i] = parseInt(bits.slice(i * 8, i * 8 + 8), 2);
+
+  const counter = Buffer.alloc(8);
+  counter.writeBigUInt64BE(BigInt(Math.floor(now / 1000 / 30)));
+  const hmac = crypto.createHmac("sha1", key).update(counter).digest();
+  const offset = hmac[hmac.length - 1] & 0x0f;
+  const code =
+    (((hmac[offset] & 0x7f) << 24) | (hmac[offset + 1] << 16) | (hmac[offset + 2] << 8) | hmac[offset + 3]) % 1000000;
+  return String(code).padStart(6, "0");
+}
+
+// Enters the authenticator code if the admin login is waiting for one.
+export async function enterAdminCodeIfAsked(page) {
+  const env = loadEnv();
+  const codeInput = page.getByLabel("6-digit security code");
+  if (await codeInput.waitFor({ state: "visible", timeout: 8000 }).then(() => true, () => false)) {
+    await codeInput.fill(totpCode(env.TEST_ADMIN_TOTP_SECRET));
+    await page.getByRole("button", { name: "Verify" }).click();
+  }
+}
+
 export async function loginAsAdmin(page) {
   await page.goto("/admin/login");
   await page.fill('input[type="email"]', ADMIN_EMAIL);
   await page.fill('input[type="password"]', ADMIN_PASSWORD);
   await page.click('button[type="submit"]');
+  await enterAdminCodeIfAsked(page);
   await page.waitForURL(/\/admin\/dashboard/, { timeout: 8000 });
 }
 
