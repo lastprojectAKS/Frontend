@@ -21,7 +21,15 @@ Dashboard & Reports) — reads and writes the real Supabase tables in
 - A database-enforced double-booking guard (`book_seats()` + a partial unique
   index), with a matching `cancel_booking()` that releases seats for resale.
 - Loyalty points actually earned per booking (1 point per dollar charged) and
-  reversed on cancellation — both inside the same RPCs, atomically.
+  reversed on cancellation — both inside the same RPCs, atomically. Also
+  actually redeemable: an "Apply my points" toggle at checkout (100 points =
+  $1 AUD) discounts the real Stripe charge, server-computed and
+  server-clamped the same way the price itself is — `quote_booking()` caps
+  how many points a given order can absorb (never down to a $0 charge,
+  Stripe can't process one), `book_seats()` re-derives and re-clamps the
+  redeemed amount rather than trusting what the client asked for, and
+  `cancel_booking()` restores redeemed points alongside reversing earned
+  ones.
 - Real favourites (`favourites` table, RLS-scoped to each customer).
 - Real password reset for both customer and admin accounts (Supabase's
   `resetPasswordForEmail` / `updateUser` flow).
@@ -66,11 +74,9 @@ What's honestly not built, rather than faked:
   attached. There's no discount mechanism in the schema to apply even if it
   were wired up — `discount`/`validity` are free-text (`"20% OFF"`), not
   structured percentage/amount data.
-- Loyalty points are earned and displayed for real (1 point per dollar
-  charged, reversed on cancellation — see above), but there's no way to
-  spend them yet: no redeem action anywhere, and no admin visibility into a
-  customer's balance (not shown on the Customers list or detail page). It's
-  accrual only, not yet a working rewards program.
+- Loyalty points can be earned and redeemed for real (see above), but
+  there's still no admin visibility into a customer's balance — not shown
+  on the Customers list or detail page, so an admin can't see or adjust it.
 - Phone number sign-in is scaffolded (`AuthContext.sendPhoneOtp` /
   `verifyPhoneOtp`) but not wired into the UI — needs a paid SMS provider
   (e.g. Twilio) connected in Supabase first.
@@ -212,6 +218,13 @@ What's covered (`e2e/`):
   the `refund-booking` Edge Function's real Stripe refund call succeeded
   (a Stripe failure there returns an inline error instead). Requires Stripe
   test-mode credentials configured to pass at all.
+- **`loyalty-redemption.spec.js`** — books and pays for a real seat to
+  guarantee a nonzero points balance, books a second seat redeeming those
+  points, and asserts against the database (not just the UI) that the
+  Stripe charge was genuinely discounted and the points balance moved by
+  exactly the right amount — then cancels both and confirms the balance
+  lands back exactly where it started. Requires Stripe test-mode
+  credentials configured to pass at all.
 - **`accessibility.spec.js`** — automated WCAG 2 A/AA checks (axe-core)
   across representative pages in both themes. This is what actually found
   every color-contrast fix in `src/index.css` — several brand/semantic

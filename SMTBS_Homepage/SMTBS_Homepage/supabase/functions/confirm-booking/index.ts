@@ -55,11 +55,13 @@ Deno.serve(async (req) => {
 
     const showtimeId = intent.metadata.showtime_id;
     const seatLabels = JSON.parse(intent.metadata.seat_labels ?? "[]");
+    const pointsRedeemed = parseInt(intent.metadata.points_redeemed ?? "0", 10);
 
     const { data: booking, error } = await supabase.rpc("book_seats", {
       p_showtime_id: showtimeId,
       p_seat_labels: seatLabels,
       p_payment_intent_id: paymentIntentId,
+      p_points_redeemed: pointsRedeemed,
     });
 
     if (error) {

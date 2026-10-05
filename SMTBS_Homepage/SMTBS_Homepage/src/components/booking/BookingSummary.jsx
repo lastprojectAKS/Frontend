@@ -58,6 +58,12 @@ export default function BookingSummary({
           <span>Booking fee</span>
           <span>{formatCurrency(pricing.fee)}</span>
         </div>
+        {pricing.discount > 0 && (
+          <div className="flex justify-between text-success">
+            <span>Loyalty points applied</span>
+            <span>-{formatCurrency(pricing.discount)}</span>
+          </div>
+        )}
         <div className="flex justify-between border-t border-border pt-2.5 text-base font-bold text-text-primary">
           <span>Total</span>
           <span>{formatCurrency(pricing.total)}</span>

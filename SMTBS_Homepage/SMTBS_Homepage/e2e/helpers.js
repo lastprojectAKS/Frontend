@@ -1,7 +1,43 @@
 // Shared fixtures for the E2E suite — not a spec file itself, since
 // Playwright doesn't allow multiple spec files to import from another spec
 // file (it treats every *.spec.js as a standalone entry point).
-//
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// CI injects these as real process env vars (see .github/workflows/e2e.yml)
+// with no .env file on disk at all; locally there's no .env in the shell's
+// environment, so this falls back to reading the file Vite itself reads.
+export function loadEnv() {
+  if (process.env.VITE_SUPABASE_URL && process.env.VITE_SUPABASE_ANON_KEY) {
+    return { VITE_SUPABASE_URL: process.env.VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY: process.env.VITE_SUPABASE_ANON_KEY };
+  }
+  const text = fs.readFileSync(path.join(__dirname, "..", ".env"), "utf8");
+  const env = {};
+  for (const line of text.split("\n")) {
+    const m = line.match(/^([A-Z_]+)=(.*)$/);
+    if (m) env[m[1]] = m[2].trim();
+  }
+  return env;
+}
+
+// Supabase's own session token, straight from the browser's localStorage —
+// for tests that need to call a real RPC directly via fetch() rather than
+// through the UI (bypassing the seat picker to prove a server-side
+// guarantee, or checking DB state the UI doesn't surface).
+export async function getAccessToken(page) {
+  const storage = await page.evaluate(() => {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k.startsWith("sb-") && k.endsWith("-auth-token")) return localStorage.getItem(k);
+    }
+    return null;
+  });
+  return JSON.parse(storage).access_token;
+}
+
 // Fixed, pre-confirmed accounts (created once via Supabase dashboard →
 // Auto Confirm User, not signup) — reused across the suite instead of
 // signing up fresh every run, since Supabase's shared email-sending has a

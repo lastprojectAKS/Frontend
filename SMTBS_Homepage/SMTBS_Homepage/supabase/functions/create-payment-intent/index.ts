@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return json({ error: "Sign in to book tickets." }, 401);
 
-    const { showtimeId, seatLabels } = await req.json();
+    const { showtimeId, seatLabels, redeemPoints } = await req.json();
     if (!showtimeId || !Array.isArray(seatLabels) || seatLabels.length === 0) {
       return json({ error: "A showtime and at least one seat are required." }, 400);
     }
@@ -42,6 +42,7 @@ Deno.serve(async (req) => {
     const { data: quote, error: quoteError } = await supabase.rpc("quote_booking", {
       p_showtime_id: showtimeId,
       p_seat_labels: seatLabels,
+      p_redeem_points: Boolean(redeemPoints),
     });
     if (quoteError) return json({ error: quoteError.message }, 200);
 
@@ -55,10 +56,11 @@ Deno.serve(async (req) => {
         showtime_id: showtimeId,
         seat_labels: JSON.stringify(seatLabels),
         customer_id: user.id,
+        points_redeemed: String(quote.pointsRedeemed),
       },
     });
 
-    return json({ clientSecret: paymentIntent.client_secret });
+    return json({ clientSecret: paymentIntent.client_secret, quote });
   } catch (err) {
     console.error(err);
     return json({ error: "Could not start payment. Please try again." }, 500);

@@ -1,26 +1,5 @@
 import { test, expect } from "@playwright/test";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
-import { loginAsCustomer, selectDateWithShowtime } from "./helpers.js";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-// CI injects these as real process env vars (see .github/workflows/e2e.yml)
-// with no .env file on disk at all; locally there's no .env in the shell's
-// environment, so this falls back to reading the file Vite itself reads.
-function loadEnv() {
-  if (process.env.VITE_SUPABASE_URL && process.env.VITE_SUPABASE_ANON_KEY) {
-    return { VITE_SUPABASE_URL: process.env.VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY: process.env.VITE_SUPABASE_ANON_KEY };
-  }
-  const text = fs.readFileSync(path.join(__dirname, "..", ".env"), "utf8");
-  const env = {};
-  for (const line of text.split("\n")) {
-    const m = line.match(/^([A-Z_]+)=(.*)$/);
-    if (m) env[m[1]] = m[2].trim();
-  }
-  return env;
-}
+import { loginAsCustomer, selectDateWithShowtime, loadEnv, getAccessToken } from "./helpers.js";
 
 // Mirrors resolve_seat_category()'s row-block layout (supabase/migrations/
 // 0007) to compute the very last seat on a screen — the seat least likely to
@@ -96,14 +75,7 @@ test("the database rejects a duplicate seat booking on the same showtime", async
   const categories = await categoriesRes.json();
   const seatLabel = lastSeatLabel(categories);
 
-  const storage = await page.evaluate(() => {
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (k.startsWith("sb-") && k.endsWith("-auth-token")) return localStorage.getItem(k);
-    }
-    return null;
-  });
-  const accessToken = JSON.parse(storage).access_token;
+  const accessToken = await getAccessToken(page);
 
   async function callBookSeats() {
     const res = await fetch(`${env.VITE_SUPABASE_URL}/rest/v1/rpc/book_seats`, {

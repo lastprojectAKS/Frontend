@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
-import { Lock, AlertCircle, Loader2 } from "lucide-react";
+import { Lock, AlertCircle, Loader2, Star } from "lucide-react";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import BookingSummary from "../components/booking/BookingSummary";
 import { useBooking } from "../context/BookingContext";
@@ -9,6 +9,7 @@ import { getMovie } from "../services/movieService";
 import { getCinema } from "../services/cinemaService";
 import { createPaymentIntent, confirmBookingAfterPayment } from "../services/paymentService";
 import { stripePromise } from "../lib/stripeClient";
+import { formatCurrency } from "../lib/format";
 
 export default function Checkout() {
   const navigate = useNavigate();
@@ -20,7 +21,9 @@ export default function Checkout() {
   const [cinema, setCinema] = useState(null);
   const [loading, setLoading] = useState(true);
   const [clientSecret, setClientSecret] = useState(null);
+  const [quote, setQuote] = useState(null);
   const [intentError, setIntentError] = useState("");
+  const [redeemPoints, setRedeemPoints] = useState(false);
 
   const hasSelection = Boolean(movieId && cinemaId && date && time && showtimeId && seats.length > 0);
 
@@ -46,9 +49,14 @@ export default function Checkout() {
   useEffect(() => {
     if (!hasSelection || !stripePromise) return;
     let cancelled = false;
-    createPaymentIntent(showtimeId, seats)
-      .then((secret) => {
-        if (!cancelled) setClientSecret(secret);
+    setClientSecret(null);
+    setQuote(null);
+    createPaymentIntent(showtimeId, seats, redeemPoints)
+      .then(({ clientSecret: secret, quote: q }) => {
+        if (!cancelled) {
+          setClientSecret(secret);
+          setQuote(q);
+        }
       })
       .catch((err) => {
         if (!cancelled) setIntentError(err.message || "Could not start payment. Please try again.");
@@ -57,7 +65,7 @@ export default function Checkout() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasSelection, showtimeId, seats]);
+  }, [hasSelection, showtimeId, seats, redeemPoints]);
 
   if (!isLoggedIn || !hasSelection) {
     return <Navigate to="/booking" replace />;
@@ -116,13 +124,27 @@ export default function Checkout() {
   }
 
   return (
-    <Elements stripe={stripePromise} options={{ clientSecret }}>
-      <CheckoutForm movie={movie} cinema={cinema} date={date} time={time} seats={seats} pricing={pricing} />
+    // clientSecret as the key forces a full remount of the Elements subtree
+    // (and the PaymentElement inside it) whenever the redeem-points toggle
+    // produces a different PaymentIntent — Stripe doesn't support swapping
+    // an already-mounted Elements tree to a different intent in place.
+    <Elements key={clientSecret} stripe={stripePromise} options={{ clientSecret }}>
+      <CheckoutForm
+        movie={movie}
+        cinema={cinema}
+        date={date}
+        time={time}
+        seats={seats}
+        pricing={pricing}
+        quote={quote}
+        redeemPoints={redeemPoints}
+        onToggleRedeemPoints={() => setRedeemPoints((v) => !v)}
+      />
     </Elements>
   );
 }
 
-function CheckoutForm({ movie, cinema, date, time, seats, pricing }) {
+function CheckoutForm({ movie, cinema, date, time, seats, pricing, quote, redeemPoints, onToggleRedeemPoints }) {
   const navigate = useNavigate();
   const { refreshUser } = useAuth();
   const { confirmBooking } = useBooking();
@@ -202,6 +224,24 @@ function CheckoutForm({ movie, cinema, date, time, seats, pricing }) {
             </div>
           )}
 
+          {quote.pointsAvailable > 0 && (
+            <section className="rounded-2xl border border-border bg-surface p-6">
+              <h2 className="mb-4 text-lg font-bold text-text-primary">Loyalty Points</h2>
+              <label className="flex cursor-pointer items-start gap-3 text-sm">
+                <input
+                  type="checkbox"
+                  checked={redeemPoints}
+                  onChange={onToggleRedeemPoints}
+                  className="mt-0.5 h-4 w-4 shrink-0 accent-accent"
+                />
+                <span className="flex items-center gap-1.5 text-text-primary">
+                  <Star className="h-4 w-4 text-warning" aria-hidden="true" />
+                  Apply my {quote.pointsAvailable} points ({formatCurrency(quote.pointsAvailable / 100)} available)
+                </span>
+              </label>
+            </section>
+          )}
+
           <section className="rounded-2xl border border-border bg-surface p-6">
             <h2 className="mb-4 text-lg font-bold text-text-primary">Payment Method</h2>
 
@@ -222,7 +262,7 @@ function CheckoutForm({ movie, cinema, date, time, seats, pricing }) {
               date={date}
               time={time}
               seats={seats}
-              pricing={pricing}
+              pricing={{ byCategory: pricing.byCategory, fee: quote.fee, total: quote.total, discount: quote.discount }}
               ctaLabel={submitting ? "Processing..." : "Complete Booking"}
               ctaDisabled={submitting || !stripe || !elements}
               ctaType="submit"
