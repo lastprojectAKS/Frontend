@@ -42,8 +42,34 @@ export async function getCinema(id) {
   return mapCinema(data, titleById);
 }
 
+export async function getMovieIdsShowingAtCinema(cinemaId) {
+  const today = new Date().toISOString().slice(0, 10);
+  const { data, error } = await supabase
+    .from("showtimes")
+    .select("movie_id")
+    .eq("cinema_id", cinemaId)
+    .eq("status", "Scheduled")
+    .gte("show_date", today);
+  if (error) throw error;
+  return [...new Set(data.map((row) => row.movie_id))];
+}
+
+// A cinema shows a movie when it has upcoming scheduled showtimes for it, so
+// the list always matches what can actually be booked.
 export async function getCinemasForMovie(movieId) {
-  const { data, error } = await supabase.from("cinemas").select("*").eq("status", "Active").contains("movie_ids", [movieId]);
+  const today = new Date().toISOString().slice(0, 10);
+  const { data: showtimes, error: showtimeError } = await supabase
+    .from("showtimes")
+    .select("cinema_id")
+    .eq("movie_id", movieId)
+    .eq("status", "Scheduled")
+    .gte("show_date", today);
+  if (showtimeError) throw showtimeError;
+
+  const cinemaIds = [...new Set(showtimes.map((row) => row.cinema_id))];
+  if (cinemaIds.length === 0) return [];
+
+  const { data, error } = await supabase.from("cinemas").select("*").eq("status", "Active").in("id", cinemaIds).order("name");
   if (error) throw error;
   const titleById = await titlesFor(data);
   return data.map((row) => mapCinema(row, titleById));

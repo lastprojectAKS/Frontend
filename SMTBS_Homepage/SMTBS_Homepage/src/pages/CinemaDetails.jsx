@@ -3,7 +3,7 @@ import { useParams, Navigate } from "react-router-dom";
 import { MapPin, Ticket, Loader2 } from "lucide-react";
 import Button from "../components/ui/Button";
 import Rating from "../components/ui/Rating";
-import { getCinema } from "../services/cinemaService";
+import { getCinema, getMovieIdsShowingAtCinema } from "../services/cinemaService";
 import { getMovie } from "../services/movieService";
 import { formatDuration } from "../lib/format";
 import useDocumentTitle from "../lib/useDocumentTitle";
@@ -27,12 +27,14 @@ export default function CinemaDetails() {
         return;
       }
       setCinema(cinemaData);
-      Promise.all(cinemaData.movieIds.map((movieId) => getMovie(movieId))).then((movies) => {
-        if (!cancelled) {
-          setNowShowing(movies.filter(Boolean));
-          setLoading(false);
-        }
-      });
+      getMovieIdsShowingAtCinema(cinemaData.id)
+        .then((movieIds) => Promise.all(movieIds.map((movieId) => getMovie(movieId))))
+        .then((movies) => {
+          if (!cancelled) {
+            setNowShowing(movies.filter(Boolean));
+            setLoading(false);
+          }
+        });
     });
     return () => {
       cancelled = true;
