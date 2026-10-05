@@ -135,8 +135,8 @@ test("redeeming loyalty points actually discounts the charge and the balance mov
   // bookings should land the balance back exactly where it started,
   // proving cancel_booking() correctly reverses both an ordinary earn and
   // an earn-after-redeem.
-  await cancelBooking(booking1.id);
   await cancelBooking(booking2.id);
+  await cancelBooking(booking1.id);
   const pointsAfterCleanup = await getPoints();
   expect(pointsAfterCleanup).toBe(pointsAtStart);
 });
