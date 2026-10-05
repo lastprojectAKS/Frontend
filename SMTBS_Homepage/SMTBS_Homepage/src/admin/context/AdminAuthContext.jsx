@@ -71,8 +71,8 @@ export function AdminAuthProvider({ children }) {
     };
   }, []);
 
-  const login = useCallback(async ({ email, password }) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  const login = useCallback(async ({ email, password, captchaToken }) => {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password, options: { captchaToken } });
     if (error) return { success: false, error: "Incorrect email or password." };
 
     const profile = await fetchProfile(data.user.id);
@@ -150,9 +150,10 @@ export function AdminAuthProvider({ children }) {
     return { success: true };
   }, []);
 
-  const requestPasswordReset = useCallback(async (email) => {
+  const requestPasswordReset = useCallback(async (email, captchaToken) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/admin/reset-password`,
+      captchaToken,
     });
     if (error) return { success: false, error: error.message };
     return { success: true };

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useLocation, useSearchParams, Navigate } from "react-router-dom";
 import { Clapperboard, Loader2, AlertCircle } from "lucide-react";
 import Button from "../../components/ui/Button";
+import TurnstileWidget, { turnstileEnabled } from "../../components/auth/TurnstileWidget";
 import { useAdminAuth } from "../context/AdminAuthContext";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -38,6 +39,8 @@ export default function AdminLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState({});
+  const [captchaToken, setCaptchaToken] = useState("");
+  const [captchaKey, setCaptchaKey] = useState(0);
   const [mfaStep, setMfaStep] = useState(null);
   const [mfaCode, setMfaCode] = useState("");
   const [mfaError, setMfaError] = useState("");
@@ -126,9 +129,16 @@ export default function AdminLogin() {
     setErrors(validation);
     if (Object.keys(validation).length > 0) return;
 
+    if (turnstileEnabled && !captchaToken) {
+      setErrors({ form: "Please complete the security check." });
+      return;
+    }
+
     setSubmitting(true);
-    const result = await login({ email, password });
+    const result = await login({ email, password, captchaToken });
     setSubmitting(false);
+    setCaptchaToken("");
+    setCaptchaKey((k) => k + 1);
 
     if (!result.success) {
       setErrors({ form: result.error });
@@ -147,10 +157,17 @@ export default function AdminLogin() {
       setErrors({ email: "Enter a valid email address." });
       return;
     }
+    if (turnstileEnabled && !captchaToken) {
+      setErrors({ form: "Please complete the security check." });
+      return;
+    }
+
     setSubmitting(true);
     setErrors({});
-    const result = await requestPasswordReset(email.trim());
+    const result = await requestPasswordReset(email.trim(), captchaToken);
     setSubmitting(false);
+    setCaptchaToken("");
+    setCaptchaKey((k) => k + 1);
     if (!result.success) {
       setErrors({ form: result.error || "Couldn't send that email. Please try again." });
       return;
@@ -221,6 +238,8 @@ export default function AdminLogin() {
                   />
                   {errors.email && <span className="text-xs text-error">{errors.email}</span>}
                 </label>
+
+                {turnstileEnabled && <TurnstileWidget key={captchaKey} onToken={setCaptchaToken} />}
 
                 <Button type="submit" disabled={submitting} className="mb-4 w-full">
                   {submitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : "Send reset link"}
@@ -329,6 +348,8 @@ export default function AdminLogin() {
                     Forgot password?
                   </button>
                 </div>
+
+                {turnstileEnabled && <TurnstileWidget key={captchaKey} onToken={setCaptchaToken} />}
 
                 <Button type="submit" disabled={submitting} className="w-full">
                   {submitting ? (
