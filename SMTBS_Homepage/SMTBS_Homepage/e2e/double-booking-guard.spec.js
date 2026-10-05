@@ -6,7 +6,13 @@ import { loginAsCustomer } from "./helpers.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// CI injects these as real process env vars (see .github/workflows/e2e.yml)
+// with no .env file on disk at all; locally there's no .env in the shell's
+// environment, so this falls back to reading the file Vite itself reads.
 function loadEnv() {
+  if (process.env.VITE_SUPABASE_URL && process.env.VITE_SUPABASE_ANON_KEY) {
+    return { VITE_SUPABASE_URL: process.env.VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY: process.env.VITE_SUPABASE_ANON_KEY };
+  }
   const text = fs.readFileSync(path.join(__dirname, "..", ".env"), "utf8");
   const env = {};
   for (const line of text.split("\n")) {

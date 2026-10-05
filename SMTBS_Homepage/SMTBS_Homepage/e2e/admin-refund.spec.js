@@ -48,7 +48,11 @@ test("admin refund actually reverses the Stripe charge, not just the DB status",
   await page.waitForTimeout(500);
 
   await page.click("text=Complete Booking");
-  await page.waitForURL(/\/booking\/success/, { timeout: 25000 });
+  // A real Stripe confirm + the confirm-booking Edge Function's own chain
+  // (re-verify with Stripe, call book_seats()) — on a loaded/shared CI
+  // runner this measurably exceeded 25s even on a successful run, not just
+  // a flaky one, so this needs real headroom, not just a bit more.
+  await page.waitForURL(/\/booking\/success/, { timeout: 45000 });
   await page.waitForTimeout(2000);
 
   const successBody = await page.textContent("body");

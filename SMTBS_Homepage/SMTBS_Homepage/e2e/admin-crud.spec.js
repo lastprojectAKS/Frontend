@@ -45,14 +45,18 @@ test.describe("Admin portal — real data smoke tests", () => {
 
   test("Bookings list loads real bookings with real booking codes", async ({ page }) => {
     await page.goto("/admin/bookings");
-    await page.waitForTimeout(1000);
-    const body = await page.textContent("body");
-    expect(body).toMatch(/BK-\d{5}/);
+    // A fixed wait + one static text snapshot (the pattern this file uses
+    // elsewhere) isn't reliable here — this query joins several tables and
+    // was slow enough on a loaded CI runner to still be mid-render at a
+    // flat 1000ms, failing against whatever the loading-skeleton placeholder
+    // text was at that exact instant. An auto-retrying assertion polls
+    // instead of snapshotting once.
+    await expect(page.getByText(/BK-\d{5}/).first()).toBeVisible({ timeout: 10_000 });
   });
 
   test("Customers list loads real customers, excluding admin accounts", async ({ page }) => {
     await page.goto("/admin/customers");
-    await page.waitForTimeout(1000);
+    await expect(page.locator("tbody tr").first()).toBeVisible({ timeout: 10_000 });
     const body = await page.textContent("body");
     expect(body).not.toContain("tester@smtbs-test.com"); // promoted to super_admin, must not appear
     expect(body).not.toContain("cus-0"); // no leftover mock-style ids
