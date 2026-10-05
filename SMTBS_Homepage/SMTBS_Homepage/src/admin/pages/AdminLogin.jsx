@@ -3,6 +3,9 @@ import { useNavigate, useLocation, useSearchParams, Navigate } from "react-route
 import { Clapperboard, Loader2, AlertCircle } from "lucide-react";
 import Button from "../../components/ui/Button";
 import TurnstileWidget, { turnstileEnabled } from "../../components/auth/TurnstileWidget";
+
+// Admin Google sign-in fails at the authenticator setup step; email and password is used instead until it's fixed.
+const GOOGLE_ADMIN_SIGNIN_ENABLED = false;
 import { useAdminAuth } from "../context/AdminAuthContext";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -252,16 +255,20 @@ export default function AdminLogin() {
             )
           ) : (
             <>
-              <Button type="button" variant="secondary" className="w-full" disabled={googleSubmitting} onClick={handleGoogle}>
-                {googleSubmitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <GoogleIcon />}
-                Continue with Google
-              </Button>
+              {GOOGLE_ADMIN_SIGNIN_ENABLED && (
+                <>
+                  <Button type="button" variant="secondary" className="w-full" disabled={googleSubmitting} onClick={handleGoogle}>
+                    {googleSubmitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <GoogleIcon />}
+                    Continue with Google
+                  </Button>
 
-              <div className="my-5 flex items-center gap-3 text-xs font-medium text-text-muted">
-                <span className="h-px flex-1 bg-border" />
-                or
-                <span className="h-px flex-1 bg-border" />
-              </div>
+                  <div className="my-5 flex items-center gap-3 text-xs font-medium text-text-muted">
+                    <span className="h-px flex-1 bg-border" />
+                    or
+                    <span className="h-px flex-1 bg-border" />
+                  </div>
+                </>
+              )}
 
               {mfaStep ? (
                 <div className="flex flex-col gap-4 text-sm">
