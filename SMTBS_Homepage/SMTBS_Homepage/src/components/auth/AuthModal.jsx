@@ -3,6 +3,7 @@ import { Loader2 } from "lucide-react";
 import Modal from "../ui/Modal";
 import Button from "../ui/Button";
 import { useAuth } from "../../context/AuthContext";
+import TurnstileWidget, { turnstileEnabled } from "./TurnstileWidget";
 import { useToast } from "../../context/ToastContext";
 
 const inputClass =
@@ -29,6 +30,8 @@ export default function AuthModal() {
   const [submitting, setSubmitting] = useState(false);
   const [googleSubmitting, setGoogleSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [captchaToken, setCaptchaToken] = useState("");
+  const [captchaKey, setCaptchaKey] = useState(0);
 
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
@@ -54,16 +57,25 @@ export default function AuthModal() {
     const email = form.email.value;
     const password = form.password.value;
 
+    if (turnstileEnabled && !captchaToken) {
+      setError("Please complete the security check.");
+      return;
+    }
+
     setSubmitting(true);
     setError("");
 
     const result =
-      mode === "login" ? await login({ email, password }) : await signup({ name: form.name.value, email, password });
+      mode === "login"
+        ? await login({ email, password, captchaToken })
+        : await signup({ name: form.name.value, email, password, captchaToken });
 
     setSubmitting(false);
 
     if (!result.success) {
       setError(result.error || "Something went wrong. Please try again.");
+      setCaptchaToken("");
+      setCaptchaKey((k) => k + 1);
       return;
     }
 
@@ -240,6 +252,8 @@ export default function AuthModal() {
               Forgot password?
             </button>
           )}
+
+          {turnstileEnabled && <TurnstileWidget key={captchaKey} onToken={setCaptchaToken} />}
 
           {error && <p className="text-sm text-error">{error}</p>}
 

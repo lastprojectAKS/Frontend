@@ -55,17 +55,17 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  const login = useCallback(async ({ email, password }) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const login = useCallback(async ({ email, password, captchaToken }) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password, options: { captchaToken } });
     if (error) return { success: false, error: error.message };
     return { success: true };
   }, []);
 
-  const signup = useCallback(async ({ name, email, password, phone }) => {
+  const signup = useCallback(async ({ name, email, password, phone, captchaToken }) => {
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { name: name.trim(), phone: phone?.trim() || null } },
+      options: { data: { name: name.trim(), phone: phone?.trim() || null }, captchaToken },
     });
     if (error) return { success: false, error: error.message };
     return { success: true };

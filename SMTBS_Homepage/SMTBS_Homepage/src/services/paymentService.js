@@ -1,11 +1,8 @@
 import { supabase } from "../lib/supabaseClient";
+import { invokeFunction } from "../lib/invokeFunction";
 
 export async function createPaymentIntent(showtimeId, seatLabels, redeemPoints = false, offerCode = null) {
-  const { data, error } = await supabase.functions.invoke("create-payment-intent", {
-    body: { showtimeId, seatLabels, redeemPoints, offerCode },
-  });
-  if (error) throw new Error(error.message || "Could not start payment.");
-  if (data?.error) throw new Error(data.error);
+  const data = await invokeFunction("create-payment-intent", { showtimeId, seatLabels, redeemPoints, offerCode });
   return { clientSecret: data.clientSecret, quote: data.quote };
 }
 

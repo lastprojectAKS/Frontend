@@ -39,6 +39,16 @@ Deno.serve(async (req) => {
       return json({ error: "A showtime and at least one seat are required." }, 400);
     }
 
+    const limiter = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const { data: allowed } = await limiter.rpc("consume_rate_limit", {
+      p_key: `payment-intent:${user.id}`,
+      p_limit: 10,
+      p_window_seconds: 60,
+    });
+    if (allowed === false) {
+      return json({ error: "Too many payment attempts. Please wait a minute and try again." }, 429);
+    }
+
     const { data: quote, error: quoteError } = await supabase.rpc("quote_booking", {
       p_showtime_id: showtimeId,
       p_seat_labels: seatLabels,
