@@ -10,7 +10,6 @@ import CinemaDetails from "./pages/CinemaDetails";
 import Offers from "./pages/Offers";
 import Booking from "./pages/Booking";
 import SeatSelection from "./pages/SeatSelection";
-import Checkout from "./pages/Checkout";
 import BookingSuccess from "./pages/BookingSuccess";
 import Profile from "./pages/Profile";
 import ResetPassword from "./pages/ResetPassword";
@@ -18,6 +17,13 @@ import NotFound from "./pages/NotFound";
 
 import { AdminAuthProvider } from "./admin/context/AdminAuthContext";
 import ProtectedAdminRoute from "./admin/components/ProtectedAdminRoute";
+
+// Checkout is the only customer page that pulls in the Stripe SDK — lazy
+// enough that eagerly bundling it made Stripe.js load (and log its "test
+// mode" warning) on every single page view, including ones with nothing to
+// do with payments, like the 404 page. Splitting it out means that script
+// only loads once someone actually reaches checkout.
+const Checkout = lazy(() => import("./pages/Checkout"));
 
 // The entire admin portal — including Recharts, which a customer browsing
 // the main site never touches — is code-split into its own chunk. A
@@ -74,7 +80,20 @@ export default function App() {
         <Route path="/offers" element={<Offers />} />
         <Route path="/booking" element={<Booking />} />
         <Route path="/booking/seats" element={<SeatSelection />} />
-        <Route path="/checkout" element={<Checkout />} />
+        <Route
+          path="/checkout"
+          element={
+            <Suspense
+              fallback={
+                <div className="flex min-h-[60vh] items-center justify-center">
+                  <Loader2 className="h-6 w-6 animate-spin text-text-muted" aria-hidden="true" />
+                </div>
+              }
+            >
+              <Checkout />
+            </Suspense>
+          }
+        />
         <Route path="/booking/success" element={<BookingSuccess />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/reset-password" element={<ResetPassword />} />
