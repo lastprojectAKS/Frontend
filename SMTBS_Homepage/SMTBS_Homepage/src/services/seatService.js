@@ -25,18 +25,35 @@ function buildSeatLayout(categories) {
   return rows;
 }
 
+// Seats that are booked, or held by another customer at checkout.
+export async function getOccupiedSeats(showtimeId) {
+  const { data, error } = await supabase.rpc("get_seat_occupancy", { p_showtime_id: showtimeId });
+  if (error) throw error;
+  return new Set(data.map((r) => r.seat_label));
+}
+
+// Reserves the given seats for the signed-in customer for 10 minutes. Throws
+// with the database's message if a seat was booked or is held by someone else.
+export async function holdSeats(showtimeId, seatLabels) {
+  const { error } = await supabase.rpc("hold_seats", { p_showtime_id: showtimeId, p_seat_labels: seatLabels });
+  if (error) throw new Error(error.message);
+}
+
+export async function releaseSeatHolds(showtimeId) {
+  const { error } = await supabase.rpc("release_seat_holds", { p_showtime_id: showtimeId });
+  if (error) throw error;
+}
+
 export async function getSeatMap(showtimeId, screenId) {
-  const [{ data: categories, error: catError }, { data: showtimeRow, error: stError }, { data: takenRows, error: seatError }] = await Promise.all([
+  const [{ data: categories, error: catError }, { data: showtimeRow, error: stError }, taken] = await Promise.all([
     supabase.from("screen_seat_categories").select("category, seat_count, price_multiplier").eq("screen_id", screenId),
     supabase.from("showtimes").select("price").eq("id", showtimeId).single(),
-    supabase.from("booking_seats").select("seat_label").eq("showtime_id", showtimeId).eq("status", "confirmed"),
+    getOccupiedSeats(showtimeId),
   ]);
   if (catError) throw catError;
   if (stError) throw stError;
-  if (seatError) throw seatError;
 
   const layout = buildSeatLayout(categories);
-  const taken = new Set(takenRows.map((r) => r.seat_label));
   const basePrice = showtimeRow.price;
   const lastRow = layout[layout.length - 1]?.row;
 

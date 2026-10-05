@@ -8,7 +8,7 @@ import { useBooking } from "../context/BookingContext";
 import { useAuth } from "../context/AuthContext";
 import { getMovie } from "../services/movieService";
 import { getCinema } from "../services/cinemaService";
-import { getSeatMap } from "../services/seatService";
+import { getSeatMap, getOccupiedSeats } from "../services/seatService";
 import { supabase } from "../lib/supabaseClient";
 import { useToast } from "../context/ToastContext";
 import { formatCurrency } from "../lib/format";
@@ -36,27 +36,37 @@ export default function SeatSelection() {
 
   useEffect(() => {
     if (!showtimeId) return;
+    let cancelled = false;
+
+    async function refreshOccupancy() {
+      let occupied;
+      try {
+        occupied = await getOccupiedSeats(showtimeId);
+      } catch {
+        return;
+      }
+      if (cancelled) return;
+      setRows((prev) =>
+        prev.map((r) => ({ ...r, seats: r.seats.map((s) => ({ ...s, occupied: occupied.has(s.id) })) }))
+      );
+      seatsRef.current
+        .filter((label) => occupied.has(label))
+        .forEach((label) => {
+          seatsRef.current = seatsRef.current.filter((s) => s !== label);
+          toggleSeatRef.current(label);
+          showToastRef.current(`Seat ${label} is no longer available.`);
+        });
+    }
+
     const channel = supabase
       .channel(`seat-occupancy-${showtimeId}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "booking_seats", filter: `showtime_id=eq.${showtimeId}` },
-        (payload) => {
-          const row = payload.eventType === "DELETE" ? payload.old : payload.new;
-          const label = row?.seat_label;
-          if (!label) return;
-          const taken = payload.eventType !== "DELETE" && payload.new.status === "confirmed";
-          setRows((prev) =>
-            prev.map((r) => ({ ...r, seats: r.seats.map((s) => (s.id === label ? { ...s, occupied: taken } : s)) }))
-          );
-          if (taken && seatsRef.current.includes(label)) {
-            toggleSeatRef.current(label);
-            showToastRef.current(`Seat ${label} was just booked by someone else.`);
-          }
-        }
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "booking_seats", filter: `showtime_id=eq.${showtimeId}` }, refreshOccupancy)
       .subscribe();
+    const poll = setInterval(refreshOccupancy, 5000);
+
     return () => {
+      cancelled = true;
+      clearInterval(poll);
       supabase.removeChannel(channel);
     };
   }, [showtimeId]);

@@ -11,6 +11,7 @@ import { createPaymentIntent, confirmBookingAfterPayment } from "../services/pay
 import { stripePromise } from "../lib/stripeClient";
 import { formatCurrency } from "../lib/format";
 import { readPendingPromo, clearPendingPromo } from "../lib/pendingPromo";
+import { holdSeats, releaseSeatHolds } from "../services/seatService";
 
 export default function Checkout() {
   const navigate = useNavigate();
@@ -33,7 +34,19 @@ export default function Checkout() {
     clearPendingPromo();
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (showtimeId) releaseSeatHolds(showtimeId).catch(() => {});
+    };
+  }, [showtimeId]);
+
   const hasSelection = Boolean(movieId && cinemaId && date && time && showtimeId && seats.length > 0);
+
+  useEffect(() => {
+    if (!hasSelection) return;
+    const refresh = setInterval(() => holdSeats(showtimeId, seats).catch(() => {}), 2 * 60 * 1000);
+    return () => clearInterval(refresh);
+  }, [hasSelection, showtimeId, seats]);
 
   useEffect(() => {
     if (!hasSelection) {
@@ -59,7 +72,8 @@ export default function Checkout() {
     let cancelled = false;
     setClientSecret(null);
     setQuote(null);
-    createPaymentIntent(showtimeId, seats, redeemPoints, appliedCode || null)
+    holdSeats(showtimeId, seats)
+      .then(() => createPaymentIntent(showtimeId, seats, redeemPoints, appliedCode || null))
       .then(({ clientSecret: secret, quote: q }) => {
         if (!cancelled) {
           setClientSecret(secret);
