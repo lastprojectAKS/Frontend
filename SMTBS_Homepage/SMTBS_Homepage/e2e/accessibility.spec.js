@@ -92,7 +92,10 @@ test.describe("Accessibility — dark theme", () => {
 
   test("Home and Offers (dark-mode badge contrast)", async ({ page }) => {
     await page.goto("/");
-    await page.waitForTimeout(1000);
+    // Same reasoning as the light-theme Home test above — card-grid entrance
+    // animations need real time to settle before scanning; a CI run caught
+    // a movie card (CIHE) still fading in at 1000ms here too.
+    await page.waitForTimeout(2500);
     await expectNoViolations(page);
     await page.goto("/offers");
     await page.waitForTimeout(800);
