@@ -20,7 +20,7 @@ export default function Layout() {
         Skip to main content
       </a>
       <Navbar />
-      <main id="main-content" className="flex-1">
+      <main id="main-content" className={location.pathname === "/" ? "flex-1" : "flex-1 pt-16"}>
         <Outlet />
       </main>
       <Footer />

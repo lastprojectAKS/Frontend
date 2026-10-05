@@ -274,13 +274,15 @@ function CheckoutForm({
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
               <div>
                 <p>{error}</p>
-                <button
-                  type="button"
-                  onClick={() => navigate("/booking/seats")}
-                  className="mt-1 font-semibold underline underline-offset-2"
-                >
-                  Choose different seats
-                </button>
+                {/seat/i.test(error) && (
+                  <button
+                    type="button"
+                    onClick={() => navigate("/booking/seats")}
+                    className="mt-1 font-semibold underline underline-offset-2"
+                  >
+                    Choose different seats
+                  </button>
+                )}
               </div>
             </div>
           )}
