@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { MapPin, Mail } from "lucide-react";
+import { MapPin, Mail, Phone } from "lucide-react";
 import InfoPage, { Section } from "../components/info/InfoPage";
 import { listCinemas } from "../services/cinemaService";
 import { SITE_INFO } from "../lib/siteInfo";
@@ -23,13 +23,22 @@ export default function Contact() {
       intro="Questions about a booking, a payment or your account? Email our support team and include your booking code where you can."
     >
       <Section title="Customer support">
-        <a
-          href={`mailto:${SITE_INFO.supportEmail}`}
-          className="inline-flex w-fit items-center gap-2 rounded-xl border border-border bg-surface px-4 py-3 font-semibold text-text-primary transition-colors hover:border-border-strong"
-        >
-          <Mail className="h-4 w-4 text-accent-text" aria-hidden="true" />
-          {SITE_INFO.supportEmail}
-        </a>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <a
+            href={`mailto:${SITE_INFO.supportEmail}`}
+            className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-3 font-semibold text-text-primary transition-colors hover:border-border-strong"
+          >
+            <Mail className="h-4 w-4 text-accent-text" aria-hidden="true" />
+            {SITE_INFO.supportEmail}
+          </a>
+          <a
+            href={`tel:${SITE_INFO.supportPhoneHref}`}
+            className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-3 font-semibold text-text-primary transition-colors hover:border-border-strong"
+          >
+            <Phone className="h-4 w-4 text-accent-text" aria-hidden="true" />
+            {SITE_INFO.supportPhone}
+          </a>
+        </div>
       </Section>
 
       {cinemas.length > 0 && (

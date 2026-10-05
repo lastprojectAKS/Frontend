@@ -3,6 +3,8 @@
 // to customer support.
 export const SITE_INFO = {
   name: "SMTBS",
-  supportEmail: "support@smtbs.example",
+  supportEmail: "zainnisar457@gmail.com",
+  supportPhone: "0424 230 419",
+  supportPhoneHref: "+61424230419",
   effectiveDate: "6 October 2026",
 };
