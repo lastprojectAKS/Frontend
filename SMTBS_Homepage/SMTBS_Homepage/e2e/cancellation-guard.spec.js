@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { loginAsCustomer, loadEnv, getAccessToken } from "./helpers.js";
+import { loginAsCustomer, loadEnv, getAccessToken, serverBookSeats } from "./helpers.js";
 
 // Checks the cancel-booking function's refusal when cancelling would take the
 // balance below zero. The booking is made through book_seats() with no payment
@@ -57,17 +57,14 @@ test("cancelling is refused while the points it earned are spent, and allowed on
   let booking = null;
   for (const row of "ABCDEFGHIJ") {
     for (let seat = 1; seat <= 10 && !booking; seat++) {
-      const res = await fetch(`${rest}/rpc/book_seats`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          p_showtime_id: showtime.id,
-          p_seat_labels: [`${row}${seat}`],
-          p_points_redeemed: 0,
-          p_offer_code: null,
-        }),
+      const res = await serverBookSeats(env, {
+        p_customer: userId,
+        p_showtime_id: showtime.id,
+        p_seat_labels: [`${row}${seat}`],
+        p_points_redeemed: 0,
+        p_offer_code: null,
       });
-      if (res.ok) booking = await res.json();
+      if (res.status === 200) booking = res.body;
     }
     if (booking) break;
   }

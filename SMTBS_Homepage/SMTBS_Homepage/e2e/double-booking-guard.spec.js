@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { loginAsCustomer, selectDateWithShowtime, loadEnv, getAccessToken } from "./helpers.js";
+import { loginAsCustomer, selectDateWithShowtime, loadEnv, getAccessToken, serverBookSeats } from "./helpers.js";
 
 // Mirrors resolve_seat_category()'s row-block layout (supabase/migrations/
 // 0007) to compute the very last seat on a screen — the seat least likely to
@@ -77,18 +77,10 @@ test("the database rejects a duplicate seat booking on the same showtime", async
 
   const accessToken = await getAccessToken(page);
 
+  const customerId = JSON.parse(Buffer.from(accessToken.split(".")[1], "base64url").toString()).sub;
+
   async function callBookSeats() {
-    const res = await fetch(`${env.VITE_SUPABASE_URL}/rest/v1/rpc/book_seats`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: env.VITE_SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify({ p_showtime_id: showtimeId, p_seat_labels: [seatLabel] }),
-    });
-    const body = await res.json();
-    return { status: res.status, body };
+    return serverBookSeats(env, { p_customer: customerId, p_showtime_id: showtimeId, p_seat_labels: [seatLabel] });
   }
 
   const first = await callBookSeats();

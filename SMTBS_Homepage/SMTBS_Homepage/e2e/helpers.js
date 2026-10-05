@@ -12,7 +12,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // environment, so this falls back to reading the file Vite itself reads.
 export function loadEnv() {
   if (process.env.VITE_SUPABASE_URL && process.env.VITE_SUPABASE_ANON_KEY) {
-    return { VITE_SUPABASE_URL: process.env.VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY: process.env.VITE_SUPABASE_ANON_KEY };
+    return {
+      VITE_SUPABASE_URL: process.env.VITE_SUPABASE_URL,
+      VITE_SUPABASE_ANON_KEY: process.env.VITE_SUPABASE_ANON_KEY,
+      SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    };
   }
   const text = fs.readFileSync(path.join(__dirname, "..", ".env"), "utf8");
   const env = {};
@@ -79,6 +83,21 @@ export async function loginAsAdmin(page) {
 // returns true and proves nothing; this checks for an actual button
 // appearing inside it instead, which is the only state that means a
 // showtime genuinely exists on that date.
+// Books seats the way the payment path does: server-side, with the service
+// role key. Customers can't call the booking function directly any more.
+export async function serverBookSeats(env, body) {
+  const res = await fetch(`${env.VITE_SUPABASE_URL}/rest/v1/rpc/book_seats_for_customer`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+    },
+    body: JSON.stringify(body),
+  });
+  return { status: res.status, body: await res.json() };
+}
+
 // fromIndex 2 skips today and tomorrow. Tests that book and then cancel their
 // own booking use it, because cancellation closes 2 hours before the showing.
 export async function selectDateWithShowtime(page, { fromIndex = 0 } = {}) {

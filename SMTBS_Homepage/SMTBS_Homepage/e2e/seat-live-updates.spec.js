@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { loginAsCustomer, selectDateWithShowtime, loadEnv, getAccessToken } from "./helpers.js";
+import { loginAsCustomer, selectDateWithShowtime, loadEnv, getAccessToken, serverBookSeats } from "./helpers.js";
 
 test("a seat booked elsewhere is occupied, and a freed seat becomes selectable, on an open seat map", async ({ page }) => {
   test.setTimeout(180_000);
@@ -28,13 +28,16 @@ test("a seat booked elsewhere is occupied, and a freed seat becomes selectable, 
   const seatId = (await free.getAttribute("aria-label")).match(/Seat ([A-Z]\d+)/)[1];
   const seat = page.locator(`button[aria-label^="Seat ${seatId}"]`).first();
 
-  const booked = await (
-    await fetch(`${env.VITE_SUPABASE_URL}/rest/v1/rpc/book_seats`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ p_showtime_id: showtimeId, p_seat_labels: [seatId], p_points_redeemed: 0, p_offer_code: null }),
+  const customerId = JSON.parse(Buffer.from(accessToken.split(".")[1], "base64url").toString()).sub;
+  const booked = (
+    await serverBookSeats(env, {
+      p_customer: customerId,
+      p_showtime_id: showtimeId,
+      p_seat_labels: [seatId],
+      p_points_redeemed: 0,
+      p_offer_code: null,
     })
-  ).json();
+  ).body;
   await expect(seat).toBeDisabled({ timeout: 15_000 });
 
   const cancel = await fetch(`${env.VITE_SUPABASE_URL}/functions/v1/cancel-booking`, {

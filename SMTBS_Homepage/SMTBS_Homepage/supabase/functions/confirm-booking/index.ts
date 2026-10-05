@@ -58,7 +58,12 @@ Deno.serve(async (req) => {
     const pointsRedeemed = parseInt(intent.metadata.points_redeemed ?? "0", 10);
     const offerCode = intent.metadata.offer_code || null;
 
-    const { data: booking, error } = await supabase.rpc("book_seats", {
+    // Verified above: the payment succeeded and belongs to this customer. The
+    // booking is created with the server key because customers can no longer
+    // call book_seats() directly.
+    const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const { data: booking, error } = await admin.rpc("book_seats_for_customer", {
+      p_customer: user.id,
       p_showtime_id: showtimeId,
       p_seat_labels: seatLabels,
       p_payment_intent_id: paymentIntentId,

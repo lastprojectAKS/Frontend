@@ -86,20 +86,15 @@ What's honestly not built, rather than faked:
   date format) are local-only — there's no notification system or per-admin
   preference concept anywhere else in the app to persist them against.
   Settings' actual account fields (profile name, password) are real.
-- Payment confirmation is synchronous, not webhook-backed: if the connection
-  drops between Stripe confirming a charge and the `confirm-booking` Edge
-  Function finishing, the card is charged but no booking is created. Not
-  auto-reconciled — recoverable manually via a refund in the Stripe
-  Dashboard. A webhook would close this gap but adds real complexity
-  (signature verification, a pending-booking/seat-hold state machine) for a
-  risk window of a few seconds; deliberately out of scope for now.
-- `book_seats()` is still callable directly by any authenticated client
-  (e.g. from the browser console) with a fabricated `payment_intent_id`,
-  bypassing Stripe entirely — the same trust model it always had, since it
-  alone *was* the entire booking flow before Stripe was added. Closing this
-  for real would mean calling it with the service-role key and an explicit
-  customer id instead of the caller's own JWT, which is a bigger change than
-  this pass makes.
+- Payment confirmation has a Stripe webhook as a safety net: if the browser
+  never returns after a successful charge, the `stripe-webhook` Edge Function
+  creates the booking from the PaymentIntent's own metadata, and refunds the
+  charge if the seats can no longer be booked. The normal path is still
+  `confirm-booking`, which re-verifies the charge with Stripe first.
+- Seat bookings are created only by the server, after Stripe confirms a
+  payment (`confirm-booking` and `stripe-webhook` call
+  `book_seats_for_customer()` with the service role). Signed-in customers
+  can't call the booking function directly (`supabase/migrations/0029`).
 
 ## Stack
 
@@ -109,7 +104,9 @@ What's honestly not built, rather than faked:
 - Framer Motion (entrance/hover/modal animation)
 - Recharts (admin dashboard & reports charts)
 - lucide-react (icon set)
-- Supabase — Postgres database, Auth (email/password + Google OAuth), Row-Level Security
+- Supabase — Postgres database, Auth (email/password, Google OAuth for customers, authenticator-app codes for admins), Row-Level Security
+- Cloudflare Turnstile — bot protection on sign-in, sign-up and password reset
+- Stripe — payments (test mode), refunds and a webhook safety net
 
 ## Getting started
 
@@ -126,14 +123,20 @@ What's honestly not built, rather than faked:
 3. Run the SQL migrations in `supabase/migrations/` (in order) via the
    Supabase SQL Editor — they set up the `profiles` table, the trigger that
    creates a profile on signup, and the RLS policies.
-4. In Supabase → Authentication → Providers, turn off "Confirm email" (for
+4. Turn on the protections in Supabase: Authentication → Multi-Factor (TOTP
+   enabled, for admin codes), and Authentication → Attack Protection (CAPTCHA
+   on, Cloudflare Turnstile selected, with your Turnstile secret key). Set
+   `VITE_TURNSTILE_SITE_KEY` in `.env` (and in your hosting provider's
+   environment variables) to the Turnstile site key. Without it, the sign-in
+   check doesn't appear and the local site still works.
+5. In Supabase → Authentication → Providers, turn off "Confirm email" (for
    frictionless local testing), and enable Google as a provider if you want
    Google sign-in working — you'll need a Google Cloud OAuth client with
    Supabase's callback URL registered as an authorized redirect URI, and your
    dev/production origins registered in Supabase's own Redirect URLs list
    (Authentication → URL Configuration) for both Google sign-in and password
    reset links to land correctly.
-5. Start the dev server:
+6. Start the dev server:
    ```bash
    npm run dev
    ```
@@ -159,14 +162,18 @@ test-mode keys.
    anyone can read.
 3. Run `supabase/migrations/0014_stripe_payment_intents.sql` via the
    Supabase SQL Editor, same as every other migration in this project.
-4. Deploy the three Edge Functions (`supabase/functions/create-payment-intent`,
-   `supabase/functions/confirm-booking`, `supabase/functions/refund-booking`)
-   — via the Supabase Dashboard's Edge Functions editor if it supports
-   pasting the code directly, or via the Supabase CLI (`supabase login`,
+4. Deploy the Edge Functions (`supabase/functions/create-payment-intent`,
+   `confirm-booking`, `refund-booking`, `cancel-booking`, `cancel-showtime`,
+   and `stripe-webhook`) via the Supabase CLI (`supabase login`,
    `supabase link --project-ref <ref>`, then `supabase functions deploy
-   <name>` for each) otherwise.
+   <name>` for each). Deploy `stripe-webhook` with `--no-verify-jwt`, since
+   Stripe signs its requests instead of sending a Supabase login token.
 5. Set the `STRIPE_SECRET_KEY` secret on the Supabase project to your
-   `sk_test_...` value (Supabase Dashboard → Edge Functions → Secrets).
+   `sk_test_...` value (Supabase Dashboard → Edge Functions → Secrets). Then,
+   in Stripe Dashboard → Developers → Webhooks, add an endpoint at
+   `https://<your-project-ref>.supabase.co/functions/v1/stripe-webhook`,
+   listening for `payment_intent.succeeded`, and set its signing secret as
+   `STRIPE_WEBHOOK_SECRET` the same way.
 6. Test with Stripe's standard test cards — any future expiry date, any
    3-digit CVC, any postcode:
    - `4242 4242 4242 4242` — succeeds immediately, no challenge.
@@ -175,12 +182,47 @@ test-mode keys.
 
    Full list: [Stripe's testing docs](https://stripe.com/docs/testing).
 
+## Security
+
+In place:
+- Row-Level Security on every table. Admin actions are checked on the server
+  (`is_admin()`), not only in the browser.
+- Anonymous visitors can't run booking, pricing or trigger functions
+  (`supabase/migrations/0026`).
+- Sign-in, sign-up, password reset and the admin login are protected by
+  Cloudflare Turnstile, which Supabase checks on every request.
+- Admins sign in with a 6-digit code from an authenticator app after their
+  password. The code is asked for on every sign-in, including after a page
+  refresh.
+- Payment attempts are limited to 10 per customer per minute
+  (`consume_rate_limit()`, `supabase/migrations/0028`).
+- Secret keys (Stripe, the Supabase service role, and Turnstile) are only
+  used on the server. Nothing secret is bundled into the browser code.
+- Responses include HSTS, frame denial, no MIME sniffing, a strict referrer
+  policy and restricted browser permissions (`vercel.json`).
+- The dependency audit reported no known vulnerabilities at the last check.
+
+Not yet in place:
+- No backups on the Free Supabase plan.
+- No error monitoring (Sentry).
+- Leaked-password checking is off.
+- No content security policy header yet.
+- The admin code isn't required for sensitive actions such as refunds and
+  showtime cancellation. It's only required to sign in.
+- Google sign-in for admins is hidden, because it fails at the authenticator
+  setup step. Admins use email and password.
+
 ## Testing
 
 Real end-to-end tests (Playwright) against a running dev server and the real
 Supabase backend — no mocking. This is the same approach used to manually
 verify every phase of the Supabase migration during development, now checked
 into the repo as a permanent regression suite instead of one-off scripts.
+
+**Current status:** the tests need two changes before a full run passes.
+Sign-in tests are blocked while Turnstile is enforced on the project, so
+either disable it for test runs or use a separate test project. Admin tests
+also need to enter the authenticator code, which they don't do yet.
 
 ```bash
 npx playwright install chromium   # one-time browser download
@@ -257,6 +299,10 @@ access through the UI. To promote an account:
    `booking_manager` for narrower access).
 3. Sign in at `/admin/login` (also linked from the site footer) with that
    same account.
+4. On the first admin sign-in, scan the QR code with an authenticator app
+   (Google Authenticator, Microsoft Authenticator or similar) and enter the
+   6-digit code it shows. Every later sign-in asks for the current code from
+   that app.
 
 ## Project structure
 
@@ -320,14 +366,15 @@ e2e/           Playwright end-to-end tests against the real backend (see Testing
 
 ## Notes
 
-- Checkout and payment are still UI-only simulations — nothing is charged —
-  but the booking, seats, and loyalty points it creates are real.
-- Customers can cancel an upcoming booking from Profile → Upcoming; admins
-  can cancel or refund any booking from `/admin/bookings`. Both paths call
-  `cancel_booking()`, which releases the seats (so they're bookable again),
-  decrements the showtime's occupancy, and reverses the loyalty points that
-  booking earned — all in the same transaction. A refund additionally flips
-  `payment_status`/`booking_status` to `Refunded` after that.
+- Payments are real Stripe charges in test mode, so no real money moves. The
+  booking, seats and loyalty points they create are real database records.
+- Customers can cancel an upcoming booking from Profile up to 2 hours before
+  the showing. Cancelling a paid booking refunds the full amount through
+  Stripe automatically. Admins can cancel any booking, and can refund it from
+  `/admin/bookings`. Cancelling a whole showtime cancels and refunds every
+  confirmed booking on it. Cancellations release the seats, reverse the
+  loyalty points the booking earned, and restore any points it used, all in
+  one database transaction.
 - Showtimes are extended on a rolling window relative to whenever
   `0010_showtime_seed_and_cancel.sql` is run, not a fixed date — it's
   additive and idempotent (closes out past 'Scheduled' showtimes to
