@@ -17,6 +17,11 @@ async function fetchProfile(userId) {
   return data;
 }
 
+async function hasPassedSecondFactor() {
+  const { data } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  return data?.currentLevel === "aal2";
+}
+
 function toAdmin(profile) {
   if (!profile || profile.role === "customer") return null;
   return {
@@ -40,7 +45,12 @@ export function AdminAuthProvider({ children }) {
         return;
       }
       const profile = await fetchProfile(session.user.id);
-      if (!cancelled) setAdmin(toAdmin(profile));
+      const next = toAdmin(profile);
+      if (next && !(await hasPassedSecondFactor())) {
+        if (!cancelled) setAdmin(null);
+        return;
+      }
+      if (!cancelled) setAdmin(next);
     }
 
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -71,8 +81,55 @@ export function AdminAuthProvider({ children }) {
       return { success: false, error: "This account doesn't have admin access." };
     }
 
+    if (await hasPassedSecondFactor()) {
+      setAdmin(toAdmin(profile));
+      return { success: true };
+    }
+
+    const { data: factors } = await supabase.auth.mfa.listFactors();
+    const verified = factors?.totp?.find((factor) => factor.status === "verified");
+    return { success: true, mfa: verified ? "verify" : "enroll", factorId: verified?.id };
+  }, []);
+
+  const startEnrollment = useCallback(async () => {
+    const { data: factors } = await supabase.auth.mfa.listFactors();
+    for (const factor of factors?.totp ?? []) {
+      if (factor.status !== "verified") await supabase.auth.mfa.unenroll({ factorId: factor.id });
+    }
+    const { data, error } = await supabase.auth.mfa.enroll({ factorType: "totp", friendlyName: "SMTBS admin" });
+    if (error) return { success: false, error: error.message };
+    return { success: true, factorId: data.id, qrCode: data.totp.qr_code, secret: data.totp.secret };
+  }, []);
+
+  const verifySecondFactor = useCallback(async (factorId, code) => {
+    const { error } = await supabase.auth.mfa.challengeAndVerify({ factorId, code });
+    if (error) return { success: false, error: "That code isn't right. Check your authenticator app and try again." };
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const profile = session ? await fetchProfile(session.user.id) : null;
     setAdmin(toAdmin(profile));
     return { success: true };
+  }, []);
+
+  const cancelSecondFactor = useCallback(async () => {
+    await supabase.auth.signOut();
+  }, []);
+
+  // A Google sign-in or a refresh can leave an admin session that hasn't passed
+  // the code yet; the login page uses this to ask for it.
+  const getPendingSecondFactor = useCallback(async () => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) return null;
+    const profile = await fetchProfile(session.user.id);
+    if (!profile || profile.role === "customer") return null;
+    if (await hasPassedSecondFactor()) return null;
+    const { data: factors } = await supabase.auth.mfa.listFactors();
+    const verified = factors?.totp?.find((factor) => factor.status === "verified");
+    return { mfa: verified ? "verify" : "enroll", factorId: verified?.id };
   }, []);
 
   const logout = useCallback(async () => {
@@ -121,6 +178,10 @@ export function AdminAuthProvider({ children }) {
     isAuthenticated: Boolean(admin),
     loading,
     login,
+    startEnrollment,
+    verifySecondFactor,
+    cancelSecondFactor,
+    getPendingSecondFactor,
     loginWithGoogle,
     logout,
     updateProfile,

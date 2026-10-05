@@ -18,7 +18,18 @@ function GoogleIcon(props) {
 }
 
 export default function AdminLogin() {
-  const { isAuthenticated, loading, login, loginWithGoogle, logout, requestPasswordReset } = useAdminAuth();
+  const {
+    isAuthenticated,
+    loading,
+    login,
+    loginWithGoogle,
+    logout,
+    requestPasswordReset,
+    startEnrollment,
+    verifySecondFactor,
+    cancelSecondFactor,
+    getPendingSecondFactor,
+  } = useAdminAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -27,6 +38,10 @@ export default function AdminLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState({});
+  const [mfaStep, setMfaStep] = useState(null);
+  const [mfaCode, setMfaCode] = useState("");
+  const [mfaError, setMfaError] = useState("");
+  const [mfaSubmitting, setMfaSubmitting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [googleSubmitting, setGoogleSubmitting] = useState(false);
   const [forgotSent, setForgotSent] = useState(false);
@@ -50,6 +65,14 @@ export default function AdminLogin() {
     setSearchParams({}, { replace: true });
   }, [loading, isAuthenticated, searchParams, setSearchParams, logout]);
 
+  useEffect(() => {
+    getPendingSecondFactor().then((info) => {
+      if (info) beginSecondFactor(info);
+    });
+    // Runs once when the login page opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   if (isAuthenticated) {
     const redirectTo = location.state?.from ?? "/admin/dashboard";
     return <Navigate to={redirectTo} replace />;
@@ -61,6 +84,40 @@ export default function AdminLogin() {
     else if (!EMAIL_RE.test(email.trim())) next.email = "Enter a valid email address.";
     if (!password) next.password = "Password is required.";
     return next;
+  }
+
+  async function beginSecondFactor(info) {
+    if (info.mfa === "enroll") {
+      const enrollment = await startEnrollment();
+      if (!enrollment.success) {
+        setErrors({ form: enrollment.error });
+        return;
+      }
+      setMfaStep({ mode: "enroll", factorId: enrollment.factorId, qrCode: enrollment.qrCode, secret: enrollment.secret });
+    } else {
+      setMfaStep({ mode: "verify", factorId: info.factorId });
+    }
+  }
+
+  async function handleCode(e) {
+    e.preventDefault();
+    setMfaSubmitting(true);
+    setMfaError("");
+    const result = await verifySecondFactor(mfaStep.factorId, mfaCode);
+    setMfaSubmitting(false);
+    if (!result.success) {
+      setMfaError(result.error);
+      setMfaCode("");
+      return;
+    }
+    navigate(location.state?.from ?? "/admin/dashboard", { replace: true });
+  }
+
+  async function cancelMfa() {
+    await cancelSecondFactor();
+    setMfaStep(null);
+    setMfaCode("");
+    setMfaError("");
   }
 
   async function handleSubmit(e) {
@@ -75,6 +132,10 @@ export default function AdminLogin() {
 
     if (!result.success) {
       setErrors({ form: result.error });
+      return;
+    }
+    if (result.mfa) {
+      await beginSecondFactor(result);
       return;
     }
     navigate(location.state?.from ?? "/admin/dashboard", { replace: true });
@@ -183,6 +244,46 @@ export default function AdminLogin() {
                 <span className="h-px flex-1 bg-border" />
               </div>
 
+              {mfaStep ? (
+                <div className="flex flex-col gap-4 text-sm">
+                  {mfaStep.mode === "enroll" ? (
+                    <>
+                      <p className="font-semibold text-text-primary">Set up two-factor sign-in</p>
+                      <p className="text-text-secondary">
+                        Scan this QR code with an authenticator app, then enter the 6-digit code it shows.
+                      </p>
+                      <img src={mfaStep.qrCode} alt="Authenticator setup QR code" className="mx-auto h-44 w-44 rounded-lg bg-white p-2" />
+                      <p className="text-xs text-text-muted">
+                        Can't scan? Enter this key in the app: <span className="font-mono text-text-secondary">{mfaStep.secret}</span>
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="font-semibold text-text-primary">Enter your security code</p>
+                      <p className="text-text-secondary">Open your authenticator app and enter the current 6-digit code.</p>
+                    </>
+                  )}
+                  <form onSubmit={handleCode} noValidate className="flex flex-col gap-4">
+                    <input
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      maxLength={6}
+                      value={mfaCode}
+                      onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ""))}
+                      placeholder="123456"
+                      aria-label="6-digit security code"
+                      className="h-11 rounded-lg border border-border-strong bg-bg-secondary px-3.5 text-center text-lg tracking-widest text-text-primary focus:outline-none focus:ring-2 focus:ring-accent"
+                    />
+                    {mfaError && <p className="text-sm text-error">{mfaError}</p>}
+                    <Button type="submit" disabled={mfaCode.length !== 6 || mfaSubmitting}>
+                      {mfaSubmitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : "Verify"}
+                    </Button>
+                    <button type="button" onClick={cancelMfa} className="text-sm font-medium text-accent-text hover:underline">
+                      Cancel and use a different account
+                    </button>
+                  </form>
+                </div>
+              ) : (
               <form onSubmit={handleSubmit} noValidate>
                 <label className="mb-4 flex flex-col gap-1.5 text-sm">
                   <span className="font-medium text-text-secondary">Email</span>
@@ -240,6 +341,7 @@ export default function AdminLogin() {
                   )}
                 </Button>
               </form>
+              )}
             </>
           )}
         </div>
