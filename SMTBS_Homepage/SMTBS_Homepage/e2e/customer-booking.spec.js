@@ -48,10 +48,6 @@ test("a customer can browse, book a real seat, and cancel it", async ({ page }) 
   await page.waitForURL(/\/checkout/, { timeout: 8000 });
   await page.waitForTimeout(700);
 
-  await page.fill('input[type="text"][placeholder="class project"]', "E2E Test");
-  await page.fill('input[type="email"]', "e2e-checkout@smtbs-test.com");
-  await page.fill('input[type="tel"]', "5551234567");
-
   // Stripe's PaymentElement renders card fields inside a cross-origin
   // iframe (served from js.stripe.com) — Playwright can't fill these with
   // plain page.fill(). Verified empirically against a real render with real

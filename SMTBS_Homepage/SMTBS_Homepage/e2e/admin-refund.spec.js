@@ -39,10 +39,6 @@ test("admin refund actually reverses the Stripe charge, not just the DB status",
   await page.waitForURL(/\/checkout/, { timeout: 8000 });
   await page.waitForTimeout(3000);
 
-  await page.fill('input[type="text"][placeholder="class project"]', "Refund Guard Test");
-  await page.fill('input[type="email"]', "refund-guard@smtbs-test.com");
-  await page.fill('input[type="tel"]', "5551234567");
-
   const stripeFrame = page.frameLocator('iframe[name^="__privateStripeFrame"]').first();
   await stripeFrame.getByText("Card", { exact: true }).click();
   await page.waitForTimeout(1000);

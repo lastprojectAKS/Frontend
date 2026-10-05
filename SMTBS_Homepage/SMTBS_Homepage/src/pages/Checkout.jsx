@@ -203,39 +203,6 @@ function CheckoutForm({ movie, cinema, date, time, seats, pricing }) {
           )}
 
           <section className="rounded-2xl border border-border bg-surface p-6">
-            <h2 className="mb-4 text-lg font-bold text-text-primary">Contact Information</h2>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <label className="flex flex-col gap-1.5 text-sm">
-                <span className="font-medium text-text-secondary">Full Name</span>
-                <input
-                  required
-                  type="text"
-                  placeholder="class project"
-                  className="h-11 rounded-lg border border-border-strong bg-bg-secondary px-3.5 text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent"
-                />
-              </label>
-              <label className="flex flex-col gap-1.5 text-sm">
-                <span className="font-medium text-text-secondary">Email</span>
-                <input
-                  required
-                  type="email"
-                  placeholder="you@example.com"
-                  className="h-11 rounded-lg border border-border-strong bg-bg-secondary px-3.5 text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent"
-                />
-              </label>
-              <label className="flex flex-col gap-1.5 text-sm sm:col-span-2">
-                <span className="font-medium text-text-secondary">Phone Number</span>
-                <input
-                  required
-                  type="tel"
-                  placeholder="(555) 123-4567"
-                  className="h-11 rounded-lg border border-border-strong bg-bg-secondary px-3.5 text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent"
-                />
-              </label>
-            </div>
-          </section>
-
-          <section className="rounded-2xl border border-border bg-surface p-6">
             <h2 className="mb-4 text-lg font-bold text-text-primary">Payment Method</h2>
 
             <PaymentElement />
