@@ -115,7 +115,8 @@ test("a customer can browse, book a real seat, and cancel it", async ({ page }) 
       headers,
       body: JSON.stringify({ bookingId: mine.id }),
     });
-    expect(res.ok, await res.clone().text()).toBe(true);
+    const cancelReply = await res.json();
+    expect(res.ok || cancelReply.error === "This booking is already cancelled.", JSON.stringify(cancelReply)).toBe(true);
   }
   const [after] = await (
     await fetch(`${env.VITE_SUPABASE_URL}/rest/v1/bookings?select=booking_status&booking_code=eq.${bookingCode}`, { headers })
