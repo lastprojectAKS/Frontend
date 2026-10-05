@@ -335,5 +335,3 @@ e2e/           Playwright end-to-end tests against the real backend (see Testing
   it's safe to re-run periodically (e.g. via a scheduled job) to keep the
   bookable window from running dry, including against the live database
   with real bookings in it.
-- `legacy-static/` holds the original vanilla HTML/CSS/JS version of this
-  site, kept for reference.
