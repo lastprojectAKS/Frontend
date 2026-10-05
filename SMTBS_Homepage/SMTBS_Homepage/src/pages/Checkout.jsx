@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
-import { Lock, AlertCircle, Loader2, Star } from "lucide-react";
+import { Lock, AlertCircle, Loader2, Star, Tag } from "lucide-react";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import BookingSummary from "../components/booking/BookingSummary";
 import { useBooking } from "../context/BookingContext";
@@ -24,6 +24,9 @@ export default function Checkout() {
   const [quote, setQuote] = useState(null);
   const [intentError, setIntentError] = useState("");
   const [redeemPoints, setRedeemPoints] = useState(false);
+  const [promoInput, setPromoInput] = useState("");
+  const [appliedCode, setAppliedCode] = useState("");
+  const [promoError, setPromoError] = useState("");
 
   const hasSelection = Boolean(movieId && cinemaId && date && time && showtimeId && seats.length > 0);
 
@@ -51,7 +54,7 @@ export default function Checkout() {
     let cancelled = false;
     setClientSecret(null);
     setQuote(null);
-    createPaymentIntent(showtimeId, seats, redeemPoints)
+    createPaymentIntent(showtimeId, seats, redeemPoints, appliedCode || null)
       .then(({ clientSecret: secret, quote: q }) => {
         if (!cancelled) {
           setClientSecret(secret);
@@ -59,13 +62,32 @@ export default function Checkout() {
         }
       })
       .catch((err) => {
-        if (!cancelled) setIntentError(err.message || "Could not start payment. Please try again.");
+        if (cancelled) return;
+        if (appliedCode) {
+          setPromoError(err.message || "That promo code could not be applied.");
+          setAppliedCode("");
+        } else {
+          setIntentError(err.message || "Could not start payment. Please try again.");
+        }
       });
     return () => {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasSelection, showtimeId, seats, redeemPoints]);
+  }, [hasSelection, showtimeId, seats, redeemPoints, appliedCode]);
+
+  function applyPromo() {
+    const code = promoInput.trim().toUpperCase();
+    if (!code) return;
+    setPromoError("");
+    setAppliedCode(code);
+  }
+
+  function removePromo() {
+    setPromoInput("");
+    setPromoError("");
+    setAppliedCode("");
+  }
 
   if (!isLoggedIn || !hasSelection) {
     return <Navigate to="/booking" replace />;
@@ -139,12 +161,32 @@ export default function Checkout() {
         quote={quote}
         redeemPoints={redeemPoints}
         onToggleRedeemPoints={() => setRedeemPoints((v) => !v)}
+        promoInput={promoInput}
+        onPromoInputChange={setPromoInput}
+        promoError={promoError}
+        onApplyPromo={applyPromo}
+        onRemovePromo={removePromo}
       />
     </Elements>
   );
 }
 
-function CheckoutForm({ movie, cinema, date, time, seats, pricing, quote, redeemPoints, onToggleRedeemPoints }) {
+function CheckoutForm({
+  movie,
+  cinema,
+  date,
+  time,
+  seats,
+  pricing,
+  quote,
+  redeemPoints,
+  onToggleRedeemPoints,
+  promoInput,
+  onPromoInputChange,
+  promoError,
+  onApplyPromo,
+  onRemovePromo,
+}) {
   const navigate = useNavigate();
   const { refreshUser } = useAuth();
   const { confirmBooking } = useBooking();
@@ -224,6 +266,64 @@ function CheckoutForm({ movie, cinema, date, time, seats, pricing, quote, redeem
             </div>
           )}
 
+          <section className="rounded-2xl border border-border bg-surface p-6">
+            <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-text-primary">
+              <Tag className="h-4 w-4 text-accent-text" aria-hidden="true" />
+              Promo Code
+            </h2>
+            {quote.offerCode ? (
+              <div className="flex items-center justify-between gap-3 rounded-lg border border-success/30 bg-success/10 px-4 py-3 text-sm">
+                <p className="text-text-primary">
+                  <span className="font-semibold">{quote.offerCode}</span> applied — you save{" "}
+                  {formatCurrency(quote.offerDiscount)}
+                </p>
+                <button
+                  type="button"
+                  onClick={onRemovePromo}
+                  className="shrink-0 font-semibold text-text-secondary underline underline-offset-2"
+                >
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <div>
+                <div className="flex gap-2">
+                  <label htmlFor="promo-code" className="sr-only">
+                    Promo code
+                  </label>
+                  <input
+                    id="promo-code"
+                    value={promoInput}
+                    onChange={(e) => onPromoInputChange(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        onApplyPromo();
+                      }
+                    }}
+                    placeholder="Enter a code"
+                    autoComplete="off"
+                    aria-describedby={promoError ? "promo-code-error" : undefined}
+                    className="h-11 w-full min-w-0 rounded-lg border border-border-strong bg-bg-secondary px-3.5 text-sm uppercase text-text-primary placeholder:normal-case placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent"
+                  />
+                  <button
+                    type="button"
+                    onClick={onApplyPromo}
+                    disabled={!promoInput.trim()}
+                    className="h-11 shrink-0 rounded-lg border border-border-strong px-4 text-sm font-semibold text-text-primary disabled:opacity-50"
+                  >
+                    Apply
+                  </button>
+                </div>
+                {promoError && (
+                  <p id="promo-code-error" role="alert" className="mt-2 text-sm text-error">
+                    {promoError}
+                  </p>
+                )}
+              </div>
+            )}
+          </section>
+
           {quote.pointsAvailable > 0 && (
             <section className="rounded-2xl border border-border bg-surface p-6">
               <h2 className="mb-4 text-lg font-bold text-text-primary">Loyalty Points</h2>
@@ -262,7 +362,14 @@ function CheckoutForm({ movie, cinema, date, time, seats, pricing, quote, redeem
               date={date}
               time={time}
               seats={seats}
-              pricing={{ byCategory: pricing.byCategory, fee: quote.fee, total: quote.total, discount: quote.discount }}
+              pricing={{
+                byCategory: pricing.byCategory,
+                fee: quote.fee,
+                total: quote.total,
+                discount: quote.discount,
+                offerCode: quote.offerCode,
+                offerDiscount: quote.offerDiscount,
+              }}
               ctaLabel={submitting ? "Processing..." : "Complete Booking"}
               ctaDisabled={submitting || !stripe || !elements}
               ctaType="submit"

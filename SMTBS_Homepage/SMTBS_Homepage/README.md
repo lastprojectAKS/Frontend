@@ -65,15 +65,20 @@ Dashboard & Reports) — reads and writes the real Supabase tables in
   and reported rather than blocking the rest of the file.
 - Real admin CRUD for Offers — the same create/edit/delete pattern as Movies,
   backed by the real `offers` table, hitting the public Offers page live.
+- Promo codes apply at checkout. Each offer has a structured percent or
+  fixed-amount discount, optional valid weekdays and date range, and an
+  active flag. `resolve_offer()` in the database is the single check for
+  whether a code is valid for a showtime, used by both the price quote and
+  the final booking. The offer discount applies to the seat subtotal before
+  the booking fee, and loyalty points can be used on top of it.
 
 What's honestly not built, rather than faked:
-- Offers are real database rows admins can manage, but the promo `code` on
-  each one is display-only — nothing validates or applies it anywhere.
-  Checkout never checks a code against the `offers` table, and the
-  customer-facing "Use Offer" button just links to `/movies` with nothing
-  attached. There's no discount mechanism in the schema to apply even if it
-  were wired up — `discount`/`validity` are free-text (`"20% OFF"`), not
-  structured percentage/amount data.
+- The customer-facing "Use Offer" button on the Offers page still just links
+  to `/movies`; customers type the code at checkout.
+- Offers that are not a percent or fixed amount off (e.g. a flat $8 ticket
+  price) can't be expressed, so the seeded TUESDAY8 offer is inactive.
+  COUPLES15's recliner-only restriction is not enforced; it discounts the
+  whole order.
 - Loyalty points can be earned and redeemed for real (see above), but
   there's still no admin visibility into a customer's balance — not shown
   on the Customers list or detail page, so an admin can't see or adjust it.

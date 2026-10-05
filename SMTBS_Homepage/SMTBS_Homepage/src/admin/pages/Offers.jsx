@@ -107,7 +107,16 @@ export default function AdminOffers() {
         </div>
       ),
     },
-    { key: "discount", header: "Discount", render: (o) => <span className="font-semibold text-text-primary">{o.discount}</span> },
+    {
+      key: "discount",
+      header: "Discount",
+      render: (o) => (
+        <div>
+          <span className="font-semibold text-text-primary">{o.discount}</span>
+          {!o.active && <p className="text-xs text-text-muted">Inactive</p>}
+        </div>
+      ),
+    },
     { key: "validity", header: "Validity", render: (o) => o.validity },
     { key: "code", header: "Code", render: (o) => <span className="font-mono text-xs text-text-secondary">{o.code}</span> },
     {

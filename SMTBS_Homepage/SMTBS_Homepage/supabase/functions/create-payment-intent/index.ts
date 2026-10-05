@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return json({ error: "Sign in to book tickets." }, 401);
 
-    const { showtimeId, seatLabels, redeemPoints } = await req.json();
+    const { showtimeId, seatLabels, redeemPoints, offerCode } = await req.json();
     if (!showtimeId || !Array.isArray(seatLabels) || seatLabels.length === 0) {
       return json({ error: "A showtime and at least one seat are required." }, 400);
     }
@@ -43,6 +43,7 @@ Deno.serve(async (req) => {
       p_showtime_id: showtimeId,
       p_seat_labels: seatLabels,
       p_redeem_points: Boolean(redeemPoints),
+      p_offer_code: typeof offerCode === "string" && offerCode.trim() ? offerCode.trim() : null,
     });
     if (quoteError) return json({ error: quoteError.message }, 200);
 
@@ -57,6 +58,7 @@ Deno.serve(async (req) => {
         seat_labels: JSON.stringify(seatLabels),
         customer_id: user.id,
         points_redeemed: String(quote.pointsRedeemed),
+        offer_code: quote.offerCode ?? "",
       },
     });
 
