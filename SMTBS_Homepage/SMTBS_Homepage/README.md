@@ -166,6 +166,17 @@ npm run test:e2e                  # requires the dev server running (npm run dev
 npm run test:e2e:ui               # interactive UI mode, useful while debugging
 ```
 
+**CI**: the full suite also runs automatically in GitHub Actions
+(`.github/workflows/e2e.yml`) on every push and pull request to `main` —
+same real backend, same real Stripe test-mode charges, no mocking there
+either. Runs are serialized (`concurrency: e2e-suite`), not parallelized,
+for the same reason the suite itself uses `workers: 1`: every spec shares
+one fixed test account and a finite seat inventory, and two runs racing
+each other would fail the same way parallel workers would locally. Needs
+three repository secrets set (Settings → Secrets and variables → Actions):
+`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_STRIPE_PUBLISHABLE_KEY`
+— the same three values from `.env`.
+
 What's covered (`e2e/`):
 - **`auth.spec.js`** — customer and admin login, wrong-password rejection, a
   non-admin account correctly locked out of `/admin`.

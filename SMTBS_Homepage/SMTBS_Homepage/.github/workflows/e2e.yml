@@ -1,0 +1,50 @@
+name: E2E tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# The suite runs against the real, shared Supabase project and Stripe test
+# account (see playwright.config.js / e2e/helpers.js) - every spec reuses
+# one fixed customer account and a finite seat inventory, so two runs
+# executing at once would race each other the same way parallel workers do
+# locally. Serializing CI runs avoids that instead of redesigning the test
+# fixtures around per-run isolation.
+concurrency:
+  group: e2e-suite
+  cancel-in-progress: false
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+      VITE_STRIPE_PUBLISHABLE_KEY: ${{ secrets.VITE_STRIPE_PUBLISHABLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      # Fail fast on a build error before spending ~4-5 minutes on the full
+      # real-backend E2E run.
+      - run: npm run build
+
+      - run: npx playwright install --with-deps chromium
+
+      - run: npx playwright test
+
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-test-results
+          path: test-results/
+          retention-days: 7
