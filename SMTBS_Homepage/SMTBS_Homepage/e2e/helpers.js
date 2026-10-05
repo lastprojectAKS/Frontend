@@ -82,6 +82,9 @@ export async function loginAsAdmin(page) {
 export async function selectDateWithShowtime(page) {
   const dateSection = page.locator("section", { has: page.locator("h2", { hasText: "Select Date" }) });
   const dateButtons = dateSection.locator("button");
+  // The date list loads from Supabase after the cinema is picked; counting
+  // before it arrives finds zero dates and fails without trying any.
+  await dateButtons.first().waitFor({ state: "visible", timeout: 15000 });
   const count = await dateButtons.count();
   const timeSection = page.locator("section", { has: page.locator("h2", { hasText: "Select Showtime" }) });
   const showtimeButton = timeSection.locator("button").first();
