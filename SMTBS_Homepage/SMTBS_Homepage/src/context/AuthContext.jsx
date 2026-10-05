@@ -79,8 +79,8 @@ export function AuthProvider({ children }) {
   // Supabase creates the account on first use, same as a password signup
   // would, so there's no separate "sign up with phone" call. Not wired
   // into the UI yet — waiting on Twilio being configured in Supabase.
-  const sendPhoneOtp = useCallback(async (phone) => {
-    const { error } = await supabase.auth.signInWithOtp({ phone });
+  const sendPhoneOtp = useCallback(async (phone, captchaToken) => {
+    const { error } = await supabase.auth.signInWithOtp({ phone, options: { captchaToken } });
     if (error) return { success: false, error: error.message };
     return { success: true };
   }, []);
@@ -104,9 +104,10 @@ export function AuthProvider({ children }) {
   // link lands on /reset-password, which supabase-js turns into an active
   // session automatically (detectSessionInUrl), then updatePassword below
   // sets the new password on it.
-  const requestPasswordReset = useCallback(async (email) => {
+  const requestPasswordReset = useCallback(async (email, captchaToken) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,
+      captchaToken,
     });
     if (error) return { success: false, error: error.message };
     return { success: true };

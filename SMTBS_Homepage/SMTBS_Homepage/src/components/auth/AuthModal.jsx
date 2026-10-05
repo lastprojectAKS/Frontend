@@ -4,6 +4,9 @@ import Modal from "../ui/Modal";
 import Button from "../ui/Button";
 import { useAuth } from "../../context/AuthContext";
 import TurnstileWidget, { turnstileEnabled } from "./TurnstileWidget";
+
+// Phone sign-in needs an SMS provider connected in Supabase; until then it is hidden.
+const PHONE_SIGNIN_ENABLED = false;
 import { useToast } from "../../context/ToastContext";
 
 const inputClass =
@@ -86,10 +89,16 @@ export default function AuthModal() {
 
   async function handleSendOtp(e) {
     e.preventDefault();
+    if (turnstileEnabled && !captchaToken) {
+      setError("Please complete the security check.");
+      return;
+    }
     setSubmitting(true);
     setError("");
-    const result = await sendPhoneOtp(phone);
+    const result = await sendPhoneOtp(phone, captchaToken);
     setSubmitting(false);
+    setCaptchaToken("");
+    setCaptchaKey((k) => k + 1);
     if (!result.success) {
       setError(result.error || "Couldn't send that code. Check the number and try again.");
       return;
@@ -114,10 +123,16 @@ export default function AuthModal() {
   async function handleForgotSubmit(e) {
     e.preventDefault();
     const email = e.target.email.value;
+    if (turnstileEnabled && !captchaToken) {
+      setError("Please complete the security check.");
+      return;
+    }
     setSubmitting(true);
     setError("");
-    const result = await requestPasswordReset(email);
+    const result = await requestPasswordReset(email, captchaToken);
     setSubmitting(false);
+    setCaptchaToken("");
+    setCaptchaKey((k) => k + 1);
     if (!result.success) {
       setError(result.error || "Couldn't send that email. Please try again.");
       return;
@@ -155,6 +170,8 @@ export default function AuthModal() {
               <span className="font-medium text-text-secondary">Email</span>
               <input name="email" required type="email" placeholder="you@example.com" autoComplete="email" className={inputClass} />
             </label>
+
+            {turnstileEnabled && <TurnstileWidget key={captchaKey} onToken={setCaptchaToken} />}
 
             {error && <p className="text-sm text-error">{error}</p>}
 
@@ -195,6 +212,7 @@ export default function AuthModal() {
         <span className="h-px flex-1 bg-border" />
       </div>
 
+      {PHONE_SIGNIN_ENABLED && (
       <div className="mb-5 flex rounded-lg border border-border-strong p-0.5">
         {[
           { value: "email", label: "Email" },
@@ -215,6 +233,7 @@ export default function AuthModal() {
           </button>
         ))}
       </div>
+      )}
 
       {method === "email" ? (
         <form key={mode} onSubmit={handleEmailSubmit} className="flex flex-col gap-4">
@@ -276,6 +295,8 @@ export default function AuthModal() {
             />
             <span className="text-xs text-text-muted">Include your country code, e.g. +61 for Australia.</span>
           </label>
+
+          {turnstileEnabled && <TurnstileWidget key={captchaKey} onToken={setCaptchaToken} />}
 
           {error && <p className="text-sm text-error">{error}</p>}
 
