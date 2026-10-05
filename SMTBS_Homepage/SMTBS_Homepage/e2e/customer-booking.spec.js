@@ -28,7 +28,7 @@ test("a customer can browse, book a real seat, and cancel it", async ({ page }) 
 
   await page.click("text=SMTBS Downtown");
   await page.waitForTimeout(700);
-  await selectDateWithShowtime(page);
+  await selectDateWithShowtime(page, { fromIndex: 2 });
   const timeSection = page.locator("section", { has: page.locator("h2", { hasText: "Select Showtime" }) });
   await timeSection.locator("button").first().click();
   await page.waitForTimeout(300);

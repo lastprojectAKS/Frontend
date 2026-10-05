@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Loader2, Mail, Phone, Calendar, Ban, CheckCircle2, Ticket, DollarSign, Heart } from "lucide-react";
+import { ArrowLeft, Loader2, Mail, Phone, Calendar, Ban, CheckCircle2, Ticket, DollarSign, Heart, Star } from "lucide-react";
 import StatCard from "../components/StatCard";
 import StatusBadge from "../components/StatusBadge";
 import DataTable from "../components/DataTable";
@@ -118,9 +118,10 @@ export default function AdminCustomerDetails() {
         </Button>
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Total Bookings" value={customer.totalBookings} icon={Ticket} />
         <StatCard label="Total Spent" value={`$${customer.totalSpent.toFixed(2)}`} icon={DollarSign} tone="accent" />
+        <StatCard label="Loyalty Points" value={customer.loyaltyPoints.toLocaleString()} icon={Star} />
         <StatCard
           label="Favourite Genres"
           value={customer.favouriteGenres.length > 0 ? customer.favouriteGenres.join(", ") : "—"}

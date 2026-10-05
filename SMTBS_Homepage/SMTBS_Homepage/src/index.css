@@ -179,3 +179,15 @@
     color: var(--color-text-primary);
   }
 }
+
+@media print {
+  header,
+  footer {
+    display: none !important;
+  }
+
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+}

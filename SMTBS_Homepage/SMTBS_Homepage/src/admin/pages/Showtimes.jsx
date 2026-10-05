@@ -98,8 +98,12 @@ export default function AdminShowtimes() {
   async function confirmCancel() {
     setCanceling(true);
     try {
-      await cancelShowtime(cancelTarget.id);
-      showToast("Showtime cancelled.");
+      const { cancelled, refunded, failures } = await cancelShowtime(cancelTarget.id);
+      showToast(
+        failures.length
+          ? `Showtime cancelled. ${cancelled} booking(s) cancelled, ${refunded} refunded — ${failures.length} need a manual refund.`
+          : `Showtime cancelled. ${refunded} refund(s) issued.`
+      );
       setCancelTarget(null);
       await refresh();
     } catch (err) {

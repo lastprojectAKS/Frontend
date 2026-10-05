@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import useDocumentTitle from "../lib/useDocumentTitle";
 import { useSearchParams } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import SearchBar from "../components/movies/SearchBar";
@@ -24,6 +25,7 @@ export default function Movies() {
 
   const [movies, setMovies] = useState([]);
   const [loading, setLoading] = useState(true);
+  useDocumentTitle("Movies");
 
   useEffect(() => {
     let cancelled = false;

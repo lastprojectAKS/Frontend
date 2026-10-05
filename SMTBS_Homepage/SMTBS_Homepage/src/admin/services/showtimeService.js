@@ -1,4 +1,5 @@
 import { supabase } from "../../lib/supabaseClient";
+import { invokeFunction } from "../../lib/invokeFunction";
 import { getScreen } from "./cinemaService";
 import {
   findShowtimeConflict,
@@ -164,11 +165,16 @@ export async function updateShowtime(id, patch) {
   return mapRow(row);
 }
 
+// Closes the showtime, cancels every confirmed booking on it and refunds them
+// through Stripe — all server-side in the cancel-showtime Edge Function.
+// Returns the outcome so the caller can report any refunds that still need
+// attention.
 export async function cancelShowtime(id) {
-  const { data: row, error } = await supabase.from("showtimes").update({ status: "Cancelled" }).eq("id", id).select(SELECT_WITH_JOINS).maybeSingle();
+  const summary = await invokeFunction("cancel-showtime", { showtimeId: id });
+  const { data: row, error } = await supabase.from("showtimes").select(SELECT_WITH_JOINS).eq("id", id).maybeSingle();
   if (error) throw error;
   if (!row) throw new Error(`Showtime "${id}" not found.`);
-  return mapRow(row);
+  return { showtime: mapRow(row), ...summary };
 }
 
 export async function deleteShowtime(id) {

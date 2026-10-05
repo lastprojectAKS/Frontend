@@ -1,4 +1,5 @@
 import { supabase } from "../../lib/supabaseClient";
+import { invokeFunction } from "../../lib/invokeFunction";
 
 export const BOOKING_STATUSES = ["Confirmed", "Pending", "Cancelled", "Refunded"];
 export const PAYMENT_STATUSES = ["Paid", "Pending", "Failed", "Refunded"];
@@ -45,13 +46,11 @@ export async function getBooking(id) {
   return mapRow(data);
 }
 
-// Reuses the same cancel_booking() RPC the customer-facing checkout flow
-// calls (supabase/migrations/0010) — it already permits an admin to cancel
-// any booking (not just their own), releases the seats, and decrements
-// showtimes.booked_seats atomically. No separate admin-only path needed.
+// Same cancel-booking Edge Function customers use. For an admin cancelling
+// someone else's booking it skips the cutoff and does not refund — refunds
+// are a separate action below.
 export async function cancelBooking(id) {
-  const { error } = await supabase.rpc("cancel_booking", { p_booking_id: id });
-  if (error) throw new Error(error.message);
+  await invokeFunction("cancel-booking", { bookingId: id });
   return getBooking(id);
 }
 
@@ -64,10 +63,6 @@ export async function cancelBooking(id) {
 // admin check can't be left to RLS alone here. Bookings that predate
 // Stripe (no payment_intent_id) just get the same status flip as before.
 export async function refundBooking(id) {
-  const { data, error } = await supabase.functions.invoke("refund-booking", {
-    body: { bookingId: id },
-  });
-  if (error) throw new Error(error.message || "Could not process the refund.");
-  if (data?.error) throw new Error(data.error);
+  await invokeFunction("refund-booking", { bookingId: id });
   return getBooking(id);
 }

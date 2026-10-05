@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Star, Ticket, Heart, Settings as SettingsIcon, Check, LogOut, UserRound, Loader2, X } from "lucide-react";
+import { Star, Ticket, Heart, Settings as SettingsIcon, LogOut, UserRound, Loader2, X } from "lucide-react";
+import { supabase } from "../lib/supabaseClient";
 import Tabs from "../components/ui/Tabs";
 import Badge from "../components/ui/Badge";
 import Button from "../components/ui/Button";
@@ -80,45 +81,118 @@ function BookingRow({ booking, onCancelled }) {
               Cancel booking
             </button>
           ))}
+        {isUpcoming && booking.bookingStatus === "Confirmed" && (
+          <p className="text-xs text-text-muted">Free cancellation up to 2 hours before the showing.</p>
+        )}
       </div>
     </div>
   );
 }
 
-function SettingsForm({ user }) {
-  const [saved, setSaved] = useState(false);
+const settingsInputClass =
+  "h-11 rounded-lg border border-border-strong bg-bg-secondary px-3.5 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-60";
 
-  function handleSubmit(e) {
+function SettingsForm({ user }) {
+  const { refreshUser, updatePassword } = useAuth();
+  const { showToast } = useToast();
+  const [name, setName] = useState(user.name ?? "");
+  const [phone, setPhone] = useState(user.phone ?? "");
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [savingPassword, setSavingPassword] = useState(false);
+
+  async function saveProfile(e) {
     e.preventDefault();
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      showToast("Please enter your name.");
+      return;
+    }
+    setSavingProfile(true);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ name: trimmedName, phone: phone.trim() || null })
+      .eq("id", user.id);
+    setSavingProfile(false);
+    if (error) {
+      showToast("Couldn't save your details. Please try again.");
+      return;
+    }
+    await refreshUser();
+    showToast("Details saved");
+  }
+
+  async function changePassword(e) {
+    e.preventDefault();
+    if (newPassword.length < 8) {
+      showToast("Password must be at least 8 characters.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      showToast("Passwords don't match.");
+      return;
+    }
+    setSavingPassword(true);
+    const result = await updatePassword(newPassword);
+    setSavingPassword(false);
+    if (!result.success) {
+      showToast(result.error);
+      return;
+    }
+    setNewPassword("");
+    setConfirmPassword("");
+    showToast("Password updated");
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex max-w-md flex-col gap-4">
-      <label className="flex flex-col gap-1.5 text-sm">
-        <span className="font-medium text-text-secondary">Full Name</span>
-        <input
-          defaultValue={user.name}
-          className="h-11 rounded-lg border border-border-strong bg-bg-secondary px-3.5 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent"
-        />
-      </label>
-      <label className="flex flex-col gap-1.5 text-sm">
-        <span className="font-medium text-text-secondary">Email</span>
-        <input
-          type="email"
-          defaultValue={user.email}
-          className="h-11 rounded-lg border border-border-strong bg-bg-secondary px-3.5 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent"
-        />
-      </label>
-      <label className="flex items-center justify-between gap-3 rounded-lg border border-border-strong bg-bg-secondary px-3.5 py-3 text-sm">
-        <span className="font-medium text-text-secondary">Email me about new releases</span>
-        <input type="checkbox" defaultChecked className="h-4 w-4 accent-accent" />
-      </label>
-      <Button type="submit" icon={saved ? Check : undefined} className="mt-2 w-fit">
-        {saved ? "Saved" : "Save Changes"}
-      </Button>
-    </form>
+    <div className="flex max-w-md flex-col gap-10">
+      <form onSubmit={saveProfile} className="flex flex-col gap-4">
+        <label className="flex flex-col gap-1.5 text-sm">
+          <span className="font-medium text-text-secondary">Full Name</span>
+          <input value={name} onChange={(e) => setName(e.target.value)} className={settingsInputClass} />
+        </label>
+        <label className="flex flex-col gap-1.5 text-sm">
+          <span className="font-medium text-text-secondary">Phone (optional)</span>
+          <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className={settingsInputClass} />
+        </label>
+        <label className="flex flex-col gap-1.5 text-sm">
+          <span className="font-medium text-text-secondary">Email</span>
+          <input type="email" value={user.email ?? ""} disabled className={settingsInputClass} />
+          <span className="text-xs text-text-muted">Your sign-in email can't be changed here yet.</span>
+        </label>
+        <Button type="submit" disabled={savingProfile} className="mt-2 w-fit">
+          {savingProfile ? "Saving…" : "Save Changes"}
+        </Button>
+      </form>
+
+      <form onSubmit={changePassword} className="flex flex-col gap-4 border-t border-border pt-8">
+        <h3 className="text-base font-bold text-text-primary">Change password</h3>
+        <label className="flex flex-col gap-1.5 text-sm">
+          <span className="font-medium text-text-secondary">New password</span>
+          <input
+            type="password"
+            autoComplete="new-password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            className={settingsInputClass}
+          />
+        </label>
+        <label className="flex flex-col gap-1.5 text-sm">
+          <span className="font-medium text-text-secondary">Confirm new password</span>
+          <input
+            type="password"
+            autoComplete="new-password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            className={settingsInputClass}
+          />
+        </label>
+        <Button type="submit" variant="secondary" disabled={savingPassword || !newPassword} className="w-fit">
+          {savingPassword ? "Updating…" : "Update password"}
+        </Button>
+      </form>
+    </div>
   );
 }
 

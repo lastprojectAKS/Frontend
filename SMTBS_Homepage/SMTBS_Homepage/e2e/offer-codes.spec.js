@@ -45,7 +45,7 @@ test("a promo code is validated at checkout and its discount is stored on the bo
     await page.waitForTimeout(700);
     await page.click("text=SMTBS Downtown");
     await page.waitForTimeout(700);
-    await selectDateWithShowtime(page);
+    await selectDateWithShowtime(page, { fromIndex: 2 });
     const timeSection = page.locator("section", { has: page.locator("h2", { hasText: "Select Showtime" }) });
     await timeSection.locator("button").first().click();
     await page.click("text=Continue to Seats");
@@ -104,10 +104,10 @@ test("a promo code is validated at checkout and its discount is stored on the bo
     expect(Number(booking.amount)).toBeCloseTo(subtotal - subtotal * 0.1 + 2.5, 2);
   } finally {
     if (bookingId) {
-      await fetch(`${rest}/rpc/cancel_booking`, {
+      await fetch(`${env.VITE_SUPABASE_URL}/functions/v1/cancel-booking`, {
         method: "POST",
         headers,
-        body: JSON.stringify({ p_booking_id: bookingId }),
+        body: JSON.stringify({ bookingId }),
       });
     }
     await fetch(`${rest}/offers?code=eq.${code}`, { method: "DELETE", headers });

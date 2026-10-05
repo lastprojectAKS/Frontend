@@ -1,5 +1,6 @@
 import { Tag, Calendar } from "lucide-react";
 import Button from "../ui/Button";
+import { setPendingPromo } from "../../lib/pendingPromo";
 
 export default function OfferCard({ offer }) {
   return (
@@ -24,7 +25,7 @@ export default function OfferCard({ offer }) {
           <Tag className="h-3.5 w-3.5" aria-hidden="true" />
           {offer.code}
         </span>
-        <Button to="/movies" variant="secondary" size="sm">
+        <Button to="/movies" variant="secondary" size="sm" onClick={() => setPendingPromo(offer.code)}>
           Use Offer
         </Button>
       </div>

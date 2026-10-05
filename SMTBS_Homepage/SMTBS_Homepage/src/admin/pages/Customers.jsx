@@ -80,6 +80,7 @@ export default function AdminCustomers() {
     { key: "phone", header: "Phone", render: (c) => c.phone },
     { key: "bookings", header: "Bookings", render: (c) => c.totalBookings },
     { key: "spend", header: "Total Spend", render: (c) => `$${c.totalSpent.toFixed(2)}` },
+    { key: "points", header: "Points", render: (c) => c.loyaltyPoints.toLocaleString() },
     { key: "joined", header: "Joined", render: (c) => c.joinedAt },
     { key: "status", header: "Status", render: (c) => <StatusBadge status={c.status} /> },
     {

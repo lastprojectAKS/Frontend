@@ -50,10 +50,10 @@ test("redeeming loyalty points actually discounts the charge and the balance mov
   }
 
   async function cancelBooking(bookingId) {
-    await fetch(`${env.VITE_SUPABASE_URL}/rest/v1/rpc/cancel_booking`, {
+    await fetch(`${env.VITE_SUPABASE_URL}/functions/v1/cancel-booking`, {
       method: "POST",
       headers: { "Content-Type": "application/json", apikey: env.VITE_SUPABASE_ANON_KEY, Authorization: `Bearer ${accessToken}` },
-      body: JSON.stringify({ p_booking_id: bookingId }),
+      body: JSON.stringify({ bookingId }),
     });
   }
 
@@ -64,7 +64,7 @@ test("redeeming loyalty points actually discounts the charge and the balance mov
     await page.waitForTimeout(700);
     await page.click("text=SMTBS Downtown");
     await page.waitForTimeout(700);
-    await selectDateWithShowtime(page);
+    await selectDateWithShowtime(page, { fromIndex: 2 });
     const timeSection = page.locator("section", { has: page.locator("h2", { hasText: "Select Showtime" }) });
     await timeSection.locator("button").first().click();
     await page.click("text=Continue to Seats");

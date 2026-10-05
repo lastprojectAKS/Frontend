@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import useDocumentTitle from "../lib/useDocumentTitle";
 import { Loader2 } from "lucide-react";
 import CinemaCard from "../components/cinemas/CinemaCard";
 import { listCinemas } from "../services/cinemaService";
@@ -6,6 +7,7 @@ import { listCinemas } from "../services/cinemaService";
 export default function Cinemas() {
   const [cinemas, setCinemas] = useState([]);
   const [loading, setLoading] = useState(true);
+  useDocumentTitle("Cinemas");
 
   useEffect(() => {
     let cancelled = false;

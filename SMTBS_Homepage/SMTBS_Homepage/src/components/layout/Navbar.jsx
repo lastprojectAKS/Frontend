@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { Search, MapPin, User, Menu, Clapperboard, ChevronDown, LogOut, Sun, Moon } from "lucide-react";
+import { Search, User, Menu, Clapperboard, LogOut, Sun, Moon } from "lucide-react";
 import MobileDrawer from "./MobileDrawer";
 import useScrollPosition from "../../hooks/useScrollPosition";
 import { useAuth } from "../../context/AuthContext";
@@ -14,7 +14,6 @@ const LINKS = [
   { to: "/offers", label: "Offers" },
 ];
 
-const CITIES = ["Sydney, NSW", "Melbourne, VIC", "Brisbane, QLD", "Perth, WA"];
 
 export default function Navbar() {
   const location = useLocation();
@@ -30,11 +29,8 @@ export default function Navbar() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
-  const [cityOpen, setCityOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
-  const [city, setCity] = useState(CITIES[0]);
   const searchInputRef = useRef(null);
-  const cityRef = useRef(null);
   const accountRef = useRef(null);
 
   useEffect(() => {
@@ -43,7 +39,6 @@ export default function Navbar() {
 
   useEffect(() => {
     function handleClickOutside(e) {
-      if (cityRef.current && !cityRef.current.contains(e.target)) setCityOpen(false);
       if (accountRef.current && !accountRef.current.contains(e.target)) setAccountOpen(false);
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -98,7 +93,7 @@ export default function Navbar() {
           </nav>
 
           <div className="flex items-center gap-1.5 sm:gap-2">
-            <form onSubmit={handleSearchSubmit} className="hidden items-center sm:flex">
+            <form onSubmit={handleSearchSubmit} className={`${searchOpen ? "flex" : "hidden"} items-center sm:flex`}>
               {searchOpen ? (
                 <input
                   ref={searchInputRef}
@@ -124,52 +119,12 @@ export default function Navbar() {
 
             <button
               type="button"
-              onClick={() => navigate("/movies")}
+              onClick={() => setSearchOpen(true)}
               aria-label="Search movies"
               className="flex h-9 w-9 items-center justify-center rounded-full text-text-secondary transition-colors hover:bg-surface hover:text-text-primary sm:hidden"
             >
               <Search className="h-4 w-4" aria-hidden="true" />
             </button>
-
-            <div className="relative hidden lg:block" ref={cityRef}>
-              <button
-                type="button"
-                onClick={() => setCityOpen((v) => !v)}
-                aria-haspopup="listbox"
-                aria-expanded={cityOpen}
-                className="flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-surface hover:text-text-primary"
-              >
-                <MapPin className="h-4 w-4" aria-hidden="true" />
-                {city}
-                <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
-              </button>
-
-              {cityOpen && (
-                <ul
-                  role="listbox"
-                  className="absolute right-0 top-full mt-2 w-48 overflow-hidden rounded-xl border border-border-strong bg-surface py-1 shadow-elevated"
-                >
-                  {CITIES.map((c) => (
-                    <li key={c}>
-                      <button
-                        type="button"
-                        role="option"
-                        aria-selected={c === city}
-                        onClick={() => {
-                          setCity(c);
-                          setCityOpen(false);
-                        }}
-                        className={`block w-full px-3 py-2 text-left text-sm transition-colors hover:bg-surface-hover ${
-                          c === city ? "text-accent-text" : "text-text-secondary"
-                        }`}
-                      >
-                        {c}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
 
             <button
               type="button"

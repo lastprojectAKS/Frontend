@@ -73,15 +73,12 @@ Dashboard & Reports) — reads and writes the real Supabase tables in
   the booking fee, and loyalty points can be used on top of it.
 
 What's honestly not built, rather than faked:
-- The customer-facing "Use Offer" button on the Offers page still just links
-  to `/movies`; customers type the code at checkout.
 - Offers that are not a percent or fixed amount off (e.g. a flat $8 ticket
   price) can't be expressed, so the seeded TUESDAY8 offer is inactive.
   COUPLES15's recliner-only restriction is not enforced; it discounts the
   whole order.
-- Loyalty points can be earned and redeemed for real (see above), but
-  there's still no admin visibility into a customer's balance — not shown
-  on the Customers list or detail page, so an admin can't see or adjust it.
+- Admins can see a customer's loyalty balance on the Customers list and detail
+  page, but can't adjust it from the UI.
 - Phone number sign-in is scaffolded (`AuthContext.sendPhoneOtp` /
   `verifyPhoneOtp`) but not wired into the UI — needs a paid SMS provider
   (e.g. Twilio) connected in Supabase first.

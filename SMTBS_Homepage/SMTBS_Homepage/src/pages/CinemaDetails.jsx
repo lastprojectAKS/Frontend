@@ -6,6 +6,7 @@ import Rating from "../components/ui/Rating";
 import { getCinema } from "../services/cinemaService";
 import { getMovie } from "../services/movieService";
 import { formatDuration } from "../lib/format";
+import useDocumentTitle from "../lib/useDocumentTitle";
 
 export default function CinemaDetails() {
   const { id } = useParams();
@@ -13,6 +14,7 @@ export default function CinemaDetails() {
   const [nowShowing, setNowShowing] = useState([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  useDocumentTitle(cinema?.name);
 
   useEffect(() => {
     let cancelled = false;

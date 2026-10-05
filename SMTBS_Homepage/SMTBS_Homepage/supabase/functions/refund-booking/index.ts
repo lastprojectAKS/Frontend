@@ -69,7 +69,12 @@ Deno.serve(async (req) => {
     // booking_status is Cancelled while payment_status is still Paid. Both
     // are handled; anything else (already Refunded, etc.) is rejected.
     if (booking.booking_status === "Confirmed") {
-      const { error: cancelError } = await supabase.rpc("cancel_booking", { p_booking_id: bookingId });
+      const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+      const { error: cancelError } = await admin.rpc("cancel_booking_as", {
+        p_booking_id: bookingId,
+        p_actor: user.id,
+        p_admin_override: true,
+      });
       if (cancelError) return json({ error: cancelError.message }, 400);
     } else if (booking.booking_status !== "Cancelled") {
       return json({ error: `This booking cannot be refunded (status: ${booking.booking_status}).` }, 400);

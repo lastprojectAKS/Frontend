@@ -10,6 +10,7 @@ import { getCinema } from "../services/cinemaService";
 import { createPaymentIntent, confirmBookingAfterPayment } from "../services/paymentService";
 import { stripePromise } from "../lib/stripeClient";
 import { formatCurrency } from "../lib/format";
+import { readPendingPromo, clearPendingPromo } from "../lib/pendingPromo";
 
 export default function Checkout() {
   const navigate = useNavigate();
@@ -24,9 +25,13 @@ export default function Checkout() {
   const [quote, setQuote] = useState(null);
   const [intentError, setIntentError] = useState("");
   const [redeemPoints, setRedeemPoints] = useState(false);
-  const [promoInput, setPromoInput] = useState("");
+  const [promoInput, setPromoInput] = useState(() => readPendingPromo());
   const [appliedCode, setAppliedCode] = useState("");
   const [promoError, setPromoError] = useState("");
+
+  useEffect(() => {
+    clearPendingPromo();
+  }, []);
 
   const hasSelection = Boolean(movieId && cinemaId && date && time && showtimeId && seats.length > 0);
 

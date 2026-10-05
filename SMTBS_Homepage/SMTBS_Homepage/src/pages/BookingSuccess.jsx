@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Navigate } from "react-router-dom";
-import { CheckCircle2, Download, Ticket, Home, QrCode, Loader2 } from "lucide-react";
+import { CheckCircle2, Printer, Ticket, Home, Loader2 } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import Button from "../components/ui/Button";
 import { useBooking } from "../context/BookingContext";
 import { getMovie } from "../services/movieService";
@@ -89,9 +90,7 @@ export default function BookingSuccess() {
 
         <div className="mt-5 flex items-center justify-between gap-4 border-t border-border pt-4">
           <span className="font-mono text-sm font-semibold text-text-primary">{confirmedBooking.bookingCode}</span>
-          <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-bg-secondary text-text-muted">
-            <QrCode className="h-7 w-7" aria-hidden="true" />
-          </div>
+          <QRCodeSVG value={confirmedBooking.bookingCode} size={56} marginSize={1} className="rounded-lg bg-white" />
         </div>
       </div>
 
@@ -99,9 +98,9 @@ export default function BookingSuccess() {
         This booking is saved to your account — paid via Stripe (test mode), no real charge occurred.
       </p>
 
-      <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
-        <Button variant="secondary" icon={Download}>
-          Download Ticket
+      <div className="print:hidden mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
+        <Button variant="secondary" icon={Printer} onClick={() => window.print()}>
+          Print Ticket
         </Button>
         <Button to="/profile" variant="secondary" icon={Ticket}>
           View Booking

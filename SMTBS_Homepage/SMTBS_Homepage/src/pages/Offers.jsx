@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import useDocumentTitle from "../lib/useDocumentTitle";
 import { Loader2 } from "lucide-react";
 import OfferCard from "../components/offers/OfferCard";
 import { listOffers } from "../services/offerService";
@@ -6,6 +7,7 @@ import { listOffers } from "../services/offerService";
 export default function Offers() {
   const [offers, setOffers] = useState([]);
   const [loading, setLoading] = useState(true);
+  useDocumentTitle("Offers");
 
   useEffect(() => {
     let cancelled = false;

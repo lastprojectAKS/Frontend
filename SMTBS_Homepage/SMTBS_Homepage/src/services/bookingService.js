@@ -1,12 +1,10 @@
 import { supabase } from "../lib/supabaseClient";
+import { invokeFunction } from "../lib/invokeFunction";
 
-// Releases the booking's seats (freeing them for resale) and marks the
-// booking Cancelled. Runs as the cancel_booking() security-definer RPC so
-// the seat release and the booked_seats decrement happen atomically with
-// the ownership check — see supabase/migrations/0010_showtime_seed_and_cancel.sql.
+// Cancels the booking and refunds a paid booking through Stripe. The cutoff
+// and the refund both happen server-side in the cancel-booking Edge Function.
 export async function cancelBooking(bookingId) {
-  const { error } = await supabase.rpc("cancel_booking", { p_booking_id: bookingId });
-  if (error) throw new Error(error.message);
+  await invokeFunction("cancel-booking", { bookingId });
 }
 
 export async function listMyBookings() {

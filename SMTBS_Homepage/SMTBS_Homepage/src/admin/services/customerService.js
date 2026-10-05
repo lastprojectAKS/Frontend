@@ -13,6 +13,7 @@ function mapProfileRow(row) {
     phone: row.phone,
     status: row.status,
     joinedAt: row.member_since,
+    loyaltyPoints: row.loyalty_points ?? 0,
   };
 }
 

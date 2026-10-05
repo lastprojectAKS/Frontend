@@ -79,7 +79,9 @@ export async function loginAsAdmin(page) {
 // returns true and proves nothing; this checks for an actual button
 // appearing inside it instead, which is the only state that means a
 // showtime genuinely exists on that date.
-export async function selectDateWithShowtime(page) {
+// fromIndex 2 skips today and tomorrow. Tests that book and then cancel their
+// own booking use it, because cancellation closes 2 hours before the showing.
+export async function selectDateWithShowtime(page, { fromIndex = 0 } = {}) {
   const dateSection = page.locator("section", { has: page.locator("h2", { hasText: "Select Date" }) });
   const dateButtons = dateSection.locator("button");
   // The date list loads from Supabase after the cinema is picked; counting
@@ -89,7 +91,7 @@ export async function selectDateWithShowtime(page) {
   const timeSection = page.locator("section", { has: page.locator("h2", { hasText: "Select Showtime" }) });
   const showtimeButton = timeSection.locator("button").first();
 
-  for (let i = 0; i < count; i++) {
+  for (let i = fromIndex; i < count; i++) {
     await dateButtons.nth(i).click();
     try {
       await showtimeButton.waitFor({ state: "visible", timeout: 3000 });

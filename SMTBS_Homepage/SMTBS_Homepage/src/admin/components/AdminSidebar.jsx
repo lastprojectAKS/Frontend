@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useAdminAuth } from "../context/AdminAuthContext";
 import { useToast } from "../../context/ToastContext";
+import { supabase } from "../../lib/supabaseClient";
 
 const NAV_ITEMS = [
   { to: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -31,11 +32,11 @@ const NAV_ITEMS = [
   { to: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
-const MOCK_NOTIFICATIONS = [
-  { id: 1, text: "New booking BK-00042 confirmed for Dune: Part Two", time: "5m ago" },
-  { id: 2, text: "Screen 2 at SMTBS Downtown is at 92% capacity tonight", time: "1h ago" },
-  { id: 3, text: "Echoes of Verity added to Now Showing", time: "3h ago" },
-];
+function describeBooking(b) {
+  const when = new Date(b.created_at).toLocaleString("en-AU", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+  const movie = b.movie?.title ?? "Unknown movie";
+  return { id: b.id, text: `${b.booking_code} · ${b.booking_status} · ${movie}`, time: when };
+}
 
 function NavItems({ onNavigate }) {
   return (
@@ -68,6 +69,8 @@ function SidebarFooter() {
   const navigate = useNavigate();
   const [profileOpen, setProfileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [notifError, setNotifError] = useState("");
   const profileRef = useRef(null);
   const notifRef = useRef(null);
 
@@ -79,6 +82,28 @@ function SidebarFooter() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (!notifOpen) return;
+    let cancelled = false;
+    supabase
+      .from("bookings")
+      .select("id, booking_code, booking_status, created_at, movie:movies(title)")
+      .order("created_at", { ascending: false })
+      .limit(8)
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) {
+          setNotifError("Couldn't load recent activity.");
+          return;
+        }
+        setNotifError("");
+        setNotifications(data.map(describeBooking));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [notifOpen]);
 
   function handleLogout() {
     logout();
@@ -103,12 +128,7 @@ function SidebarFooter() {
           aria-expanded={notifOpen}
           className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
         >
-          <span className="relative">
-            <Bell className="h-4 w-4" aria-hidden="true" />
-            <span className="absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-accent text-[9px] font-bold text-white">
-              {MOCK_NOTIFICATIONS.length}
-            </span>
-          </span>
+          <Bell className="h-4 w-4" aria-hidden="true" />
           Notifications
         </button>
 
@@ -118,9 +138,13 @@ function SidebarFooter() {
             className="absolute bottom-full left-0 mb-2 w-72 overflow-hidden rounded-xl border border-border-strong bg-surface py-1 shadow-elevated"
           >
             <p className="border-b border-border px-3.5 py-2.5 text-xs font-semibold uppercase tracking-wide text-text-muted">
-              Notifications
+              Recent bookings
             </p>
-            {MOCK_NOTIFICATIONS.map((n) => (
+            {notifError && <p className="px-3.5 py-2.5 text-sm text-error">{notifError}</p>}
+            {!notifError && notifications.length === 0 && (
+              <p className="px-3.5 py-2.5 text-sm text-text-muted">No bookings yet.</p>
+            )}
+            {notifications.map((n) => (
               <div key={n.id} className="border-b border-border px-3.5 py-2.5 text-sm last:border-b-0">
                 <p className="text-text-primary">{n.text}</p>
                 <p className="mt-0.5 text-xs text-text-muted">{n.time}</p>

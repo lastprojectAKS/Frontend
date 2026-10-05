@@ -1,11 +1,45 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Bell, BellRing } from "lucide-react";
 import Rating from "../ui/Rating";
 import { formatDate } from "../../lib/format";
+import { useAuth } from "../../context/AuthContext";
+import { useToast } from "../../context/ToastContext";
+import { hasReleaseAlert, setReleaseAlert } from "../../services/releaseAlertService";
 
 export default function ComingSoonCard({ movie }) {
+  const { user, openAuthModal } = useAuth();
+  const { showToast } = useToast();
   const [notifying, setNotifying] = useState(false);
+
+  useEffect(() => {
+    if (!user) {
+      setNotifying(false);
+      return;
+    }
+    let cancelled = false;
+    hasReleaseAlert(user.id, movie.id).then((on) => {
+      if (!cancelled) setNotifying(on);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user, movie.id]);
+
+  async function toggleAlert() {
+    if (!user) {
+      openAuthModal("login");
+      return;
+    }
+    const next = !notifying;
+    setNotifying(next);
+    try {
+      await setReleaseAlert(user.id, movie.id, next);
+    } catch {
+      setNotifying(!next);
+      showToast("Couldn't save your alert. Please try again.");
+    }
+  }
 
   return (
     <div className="flex gap-4 rounded-2xl border border-border bg-surface p-4">
@@ -31,7 +65,7 @@ export default function ComingSoonCard({ movie }) {
 
         <button
           type="button"
-          onClick={() => setNotifying((v) => !v)}
+          onClick={toggleAlert}
           aria-pressed={notifying}
           className={`mt-auto inline-flex w-fit items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
             notifying
@@ -40,7 +74,7 @@ export default function ComingSoonCard({ movie }) {
           }`}
         >
           {notifying ? <BellRing className="h-3.5 w-3.5" aria-hidden="true" /> : <Bell className="h-3.5 w-3.5" aria-hidden="true" />}
-          {notifying ? "We'll notify you" : "Notify Me"}
+          {notifying ? "Alert set" : "Notify Me"}
         </button>
       </div>
     </div>

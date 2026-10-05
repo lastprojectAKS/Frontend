@@ -8,6 +8,7 @@ import TrailerModal from "../components/movies/TrailerModal";
 import { getMovie, isNowShowing } from "../services/movieService";
 import { getCinemasForMovie } from "../services/cinemaService";
 import { formatDuration, formatDate } from "../lib/format";
+import useDocumentTitle from "../lib/useDocumentTitle";
 import { useFavourites } from "../context/FavouritesContext";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
@@ -20,6 +21,7 @@ export default function MovieDetails() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const { isFavourite, toggleFavourite } = useFavourites();
+  useDocumentTitle(movie?.title);
   const { openAuthModal } = useAuth();
   const { showToast } = useToast();
 
