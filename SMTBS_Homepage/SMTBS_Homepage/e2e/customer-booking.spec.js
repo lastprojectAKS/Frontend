@@ -65,6 +65,18 @@ test("a customer can browse, book a real seat, and cancel it", async ({ page }) 
   await stripeFrame.locator('input[name="number"]').fill("4242424242424242");
   await stripeFrame.locator('input[name="expiry"]').fill("1234");
   await stripeFrame.locator('input[name="cvc"]').fill("123");
+  // Stripe infers the billing country from IP and only shows (and
+  // requires) this field for some inferred countries — never appeared
+  // testing locally, but a real CI run (US-based runner) showed a Country
+  // + ZIP code field and blocked submission on it being empty, so
+  // "Complete Booking" never did anything and the test just timed out
+  // waiting for a redirect that submission validation was silently
+  // blocking. Conditional so this stays a no-op wherever the field isn't
+  // rendered at all.
+  const postalCodeField = stripeFrame.locator('input[name="postalCode"]');
+  if (await postalCodeField.count()) {
+    await postalCodeField.fill("12345");
+  }
   await page.waitForTimeout(500);
 
   await page.click("text=Complete Booking");
