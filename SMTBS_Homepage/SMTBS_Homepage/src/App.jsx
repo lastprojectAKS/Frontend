@@ -14,6 +14,10 @@ import BookingSuccess from "./pages/BookingSuccess";
 import Profile from "./pages/Profile";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
+import Help from "./pages/Help";
+import Contact from "./pages/Contact";
+import Terms from "./pages/Terms";
+import Privacy from "./pages/Privacy";
 
 import { AdminAuthProvider } from "./admin/context/AdminAuthContext";
 import ProtectedAdminRoute from "./admin/components/ProtectedAdminRoute";
@@ -98,6 +102,10 @@ export default function App() {
         <Route path="/booking/success" element={<BookingSuccess />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/help" element={<Help />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/terms" element={<Terms />} />
+        <Route path="/privacy" element={<Privacy />} />
         <Route path="*" element={<NotFound />} />
       </Route>
 

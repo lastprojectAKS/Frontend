@@ -52,10 +52,10 @@ const NAV_COLUMNS = [
   {
     title: "Support",
     links: [
-      { label: "Help Center", to: "/#" },
-      { label: "Contact Us", to: "/#" },
-      { label: "Terms of Service", to: "/#" },
-      { label: "Privacy Policy", to: "/#" },
+      { label: "Help Center", to: "/help" },
+      { label: "Contact Us", to: "/contact" },
+      { label: "Terms of Service", to: "/terms" },
+      { label: "Privacy Policy", to: "/privacy" },
     ],
   },
 ];
