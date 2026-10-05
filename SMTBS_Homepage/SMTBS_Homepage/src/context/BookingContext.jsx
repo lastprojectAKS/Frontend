@@ -1,5 +1,6 @@
 import { createContext, useContext, useMemo, useState, useCallback } from "react";
 import { BOOKING_FEE } from "../lib/constants";
+import { useToast } from "./ToastContext";
 
 const BookingContext = createContext(null);
 
@@ -14,6 +15,7 @@ const initialSelection = {
 };
 
 export function BookingProvider({ children }) {
+  const { showToast } = useToast();
   const [selection, setSelection] = useState(initialSelection);
   // Real per-seat category/price, populated once the seat map loads —
   // pricing below is derived from this instead of a flat rate, since real
@@ -43,16 +45,25 @@ export function BookingProvider({ children }) {
     setSeatDetails({});
   }, []);
 
-  const toggleSeat = useCallback((seatId) => {
-    setSelection((prev) => {
-      const isSelected = prev.seats.includes(seatId);
-      if (isSelected) {
-        return { ...prev, seats: prev.seats.filter((s) => s !== seatId) };
-      }
-      if (prev.seats.length >= 8) return prev;
-      return { ...prev, seats: [...prev.seats, seatId] };
-    });
-  }, []);
+  // 8 is also book_seats()'s own hard cap (supabase/migrations/0007) — kept
+  // in sync so a selection that's valid here is guaranteed valid at
+  // checkout, not just rejected after the customer's already paid.
+  const toggleSeat = useCallback(
+    (seatId) => {
+      setSelection((prev) => {
+        const isSelected = prev.seats.includes(seatId);
+        if (isSelected) {
+          return { ...prev, seats: prev.seats.filter((s) => s !== seatId) };
+        }
+        if (prev.seats.length >= 8) {
+          showToast("You can select up to 8 seats per booking.");
+          return prev;
+        }
+        return { ...prev, seats: [...prev.seats, seatId] };
+      });
+    },
+    [showToast]
+  );
 
   const clearSelection = useCallback(() => {
     setSelection(initialSelection);
