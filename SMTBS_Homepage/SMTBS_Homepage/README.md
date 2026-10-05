@@ -49,6 +49,12 @@ Dashboard & Reports) — reads and writes the real Supabase tables in
   Supabase Storage bucket (`movie-images`, `supabase/migrations/0015`) with
   admin-only write access (same `is_admin()` check every other admin write
   uses) and a 5MB/image-only limit enforced by the bucket itself.
+- Bulk movie import — "Import CSV" on the Movies page uploads a CSV
+  (template: `public/templates/movies-import-template.csv`) and creates a
+  real movie per row via the same `createMovie()` every other admin write
+  goes through. Best-effort: each row is validated and imported
+  independently, so one bad row (missing field, duplicate title) is skipped
+  and reported rather than blocking the rest of the file.
 
 What's honestly not built, rather than faked:
 - Phone number sign-in is scaffolded (`AuthContext.sendPhoneOtp` /

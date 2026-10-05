@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Pencil, Trash2, Ban, CheckCircle2, Star } from "lucide-react";
+import { Plus, Pencil, Trash2, Ban, CheckCircle2, Star, Upload } from "lucide-react";
 import PageHeader from "../components/PageHeader";
 import SearchInput from "../components/SearchInput";
 import FilterDropdown from "../components/FilterDropdown";
@@ -9,6 +9,7 @@ import Pagination from "../components/Pagination";
 import StatusBadge from "../components/StatusBadge";
 import ConfirmDialog from "../components/ConfirmDialog";
 import MovieForm from "../components/MovieForm";
+import BulkImportMovies from "../components/BulkImportMovies";
 import Modal from "../../components/ui/Modal";
 import Button from "../../components/ui/Button";
 import { usePagination } from "../lib/usePagination";
@@ -37,6 +38,8 @@ export default function AdminMovies() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingMovie, setEditingMovie] = useState(null);
   const [saving, setSaving] = useState(false);
+
+  const [importOpen, setImportOpen] = useState(false);
 
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
@@ -203,9 +206,14 @@ export default function AdminMovies() {
         title="Movies"
         description="Manage your catalog — add titles, update showings, and retire ended runs."
         actions={
-          <Button icon={Plus} onClick={openCreate}>
-            Add Movie
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="secondary" icon={Upload} onClick={() => setImportOpen(true)}>
+              Import CSV
+            </Button>
+            <Button icon={Plus} onClick={openCreate}>
+              Add Movie
+            </Button>
+          </div>
         }
       />
 
@@ -233,6 +241,10 @@ export default function AdminMovies() {
           onCancel={() => setFormOpen(false)}
           onSubmit={handleSubmit}
         />
+      </Modal>
+
+      <Modal open={importOpen} onClose={() => setImportOpen(false)} title="Import movies from CSV" size="lg">
+        <BulkImportMovies onImported={refresh} />
       </Modal>
 
       <ConfirmDialog
