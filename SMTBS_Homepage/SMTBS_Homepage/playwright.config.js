@@ -15,10 +15,31 @@ export default defineConfig({
   workers: 1,
   retries: 0,
   reporter: "list",
+  // Default 5s is too tight on a shared/throttled CI runner for toBeVisible()
+  // assertions following a real Supabase round-trip — confirmed by a CI run
+  // where the admin dashboard's own "Total Revenue" text genuinely hadn't
+  // rendered yet at 5s, not just occasionally flaking.
+  expect: {
+    timeout: process.env.CI ? 15_000 : 5_000,
+  },
   use: {
     baseURL: "http://localhost:5173",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
+    // body has `transition: background-color 0.25s ease, color 0.25s ease`
+    // (index.css), and ThemeContext sets the data-theme attribute inside a
+    // useEffect, not during the initial render — so there's a real window
+    // right after mount where different elements' background/text colors
+    // can be mid-transition between theme values at the exact moment axe
+    // samples them. Caught a false "insufficient contrast" violation this
+    // way in CI: background had already finished transitioning to light
+    // while a sibling element's text color hadn't. Same class of issue
+    // expectNoViolations() already works around for hover-fade overlays
+    // (see accessibility.spec.js) — this generalizes it to theme-switch
+    // transitions by just skipping CSS transitions entirely for tests,
+    // using the reduced-motion support the app already implements for
+    // real accessibility reasons, not just for this workaround.
+    reducedMotion: "reduce",
   },
   projects: [
     {

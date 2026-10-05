@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { loginAsCustomer } from "./helpers.js";
+import { loginAsCustomer, selectDateWithShowtime } from "./helpers.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -80,9 +80,7 @@ test("the database rejects a duplicate seat booking on the same showtime", async
   await page.waitForTimeout(700);
   await page.click("text=SMTBS Downtown");
   await page.waitForTimeout(700);
-  const dateSection = page.locator("section", { has: page.locator("h2", { hasText: "Select Date" }) });
-  await dateSection.locator("button").first().click();
-  await page.waitForTimeout(700);
+  await selectDateWithShowtime(page);
   const timeSection = page.locator("section", { has: page.locator("h2", { hasText: "Select Showtime" }) });
   await timeSection.locator("button").first().click();
   await page.click("text=Continue to Seats");

@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { loginAsCustomer } from "./helpers.js";
+import { loginAsCustomer, selectDateWithShowtime } from "./helpers.js";
 
 // Full real booking flow against the live Supabase backend — no mocking.
 // Books a real seat, confirms it, then cancels it as cleanup so the suite
@@ -17,7 +17,7 @@ test("a customer can browse, book a real seat, and cancel it", async ({ page }) 
   // Requires real Stripe test-mode credentials configured both locally
   // (VITE_STRIPE_PUBLISHABLE_KEY) and on the linked Supabase project
   // (STRIPE_SECRET_KEY secret) — see README's "Payments" section.
-  test.setTimeout(75_000);
+  test.setTimeout(150_000);
 
   await loginAsCustomer(page);
 
@@ -28,9 +28,7 @@ test("a customer can browse, book a real seat, and cancel it", async ({ page }) 
 
   await page.click("text=SMTBS Downtown");
   await page.waitForTimeout(700);
-  const dateSection = page.locator("section", { has: page.locator("h2", { hasText: "Select Date" }) });
-  await dateSection.locator("button").first().click();
-  await page.waitForTimeout(700);
+  await selectDateWithShowtime(page);
   const timeSection = page.locator("section", { has: page.locator("h2", { hasText: "Select Showtime" }) });
   await timeSection.locator("button").first().click();
   await page.waitForTimeout(300);
@@ -71,10 +69,12 @@ test("a customer can browse, book a real seat, and cancel it", async ({ page }) 
 
   await page.click("text=Complete Booking");
   // A real Stripe confirm + the confirm-booking Edge Function's own chain
-  // (re-verify with Stripe, call book_seats()) — on a loaded/shared CI
-  // runner this measurably exceeded 25s even on a successful run, not just
-  // a flaky one, so this needs real headroom, not just a bit more.
-  await page.waitForURL(/\/booking\/success/, { timeout: 45000 });
+  // (re-verify with Stripe, call book_seats()) — confirmed on a real CI run
+  // that this can genuinely take 45+ seconds end to end (Edge Function cold
+  // starts, cross-region network to Stripe + Supabase from the runner), not
+  // just occasionally flake at a tighter number. 100s / a 150s test budget
+  // gives real room instead of guessing at another arbitrary bump.
+  await page.waitForURL(/\/booking\/success/, { timeout: 100_000 });
   await page.waitForTimeout(2000);
 
   const successBody = await page.textContent("body");
