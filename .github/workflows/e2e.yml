@@ -16,6 +16,13 @@ concurrency:
   group: e2e-suite
   cancel-in-progress: false
 
+# The actual Vite project lives two directories below the repo root
+# (SMTBS_Homepage/SMTBS_Homepage/) rather than at the root itself - every
+# run step below executes relative to that path.
+defaults:
+  run:
+    working-directory: SMTBS_Homepage/SMTBS_Homepage
+
 jobs:
   e2e:
     runs-on: ubuntu-latest
@@ -31,6 +38,7 @@ jobs:
         with:
           node-version: 20
           cache: npm
+          cache-dependency-path: SMTBS_Homepage/SMTBS_Homepage/package-lock.json
 
       - run: npm ci
 
@@ -46,5 +54,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: playwright-test-results
-          path: test-results/
+          path: SMTBS_Homepage/SMTBS_Homepage/test-results/
           retention-days: 7
