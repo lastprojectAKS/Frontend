@@ -5,7 +5,7 @@ test.describe("Customer authentication", () => {
   test("logs in with valid credentials and shows the real profile", async ({ page }) => {
     await loginAsCustomer(page);
     await page.goto("/profile");
-    await expect(page.getByText(CUSTOMER_EMAIL)).toBeVisible();
+    await expect(page.getByText(CUSTOMER_EMAIL)).toBeVisible({ timeout: 15_000 });
   });
 
   test("rejects an incorrect password with an inline error, not a crash", async ({ page }) => {

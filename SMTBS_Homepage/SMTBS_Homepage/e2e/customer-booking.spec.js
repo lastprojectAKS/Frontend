@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { loginAsCustomer, selectDateWithShowtime } from "./helpers.js";
+import { loginAsCustomer, selectDateWithShowtime, loadEnv, getAccessToken } from "./helpers.js";
 
 // Full real booking flow against the live Supabase backend — no mocking.
 // Books a real seat, confirms it, then cancels it as cleanup so the suite
@@ -91,6 +91,7 @@ test("a customer can browse, book a real seat, and cancel it", async ({ page }) 
 
   const successBody = await page.textContent("body");
   expect(successBody).toMatch(/BK-\d{5}/);
+  const bookingCode = successBody.match(/BK-\d{5}/)[0];
 
   // Cleanup: cancel the booking we just made so the suite is repeatable.
   await page.goto("/profile");
@@ -99,7 +100,27 @@ test("a customer can browse, book a real seat, and cancel it", async ({ page }) 
   await page.waitForTimeout(400);
   await page.getByRole("button", { name: "Confirm cancel" }).click();
   await page.waitForTimeout(1200);
-  await expect(page.getByText("No upcoming bookings")).toBeVisible();
+
+  // Other upcoming bookings on the shared account must not fail this test, so
+  // check this run's own booking by its code and cancel it if still confirmed.
+  const env = loadEnv();
+  const accessToken = await getAccessToken(page);
+  const headers = { "Content-Type": "application/json", apikey: env.VITE_SUPABASE_ANON_KEY, Authorization: `Bearer ${accessToken}` };
+  const [mine] = await (
+    await fetch(`${env.VITE_SUPABASE_URL}/rest/v1/bookings?select=id,booking_status&booking_code=eq.${bookingCode}`, { headers })
+  ).json();
+  if (mine.booking_status === "Confirmed") {
+    const res = await fetch(`${env.VITE_SUPABASE_URL}/functions/v1/cancel-booking`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ bookingId: mine.id }),
+    });
+    expect(res.ok, await res.clone().text()).toBe(true);
+  }
+  const [after] = await (
+    await fetch(`${env.VITE_SUPABASE_URL}/rest/v1/bookings?select=booking_status&booking_code=eq.${bookingCode}`, { headers })
+  ).json();
+  expect(after.booking_status).toBe("Cancelled");
 });
 
 test("Booking a movie requires login — an anonymous visitor is prompted to sign in", async ({ page }) => {

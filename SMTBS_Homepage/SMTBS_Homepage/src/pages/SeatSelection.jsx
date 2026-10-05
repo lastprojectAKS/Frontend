@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import SeatMap from "../components/booking/SeatMap";
@@ -9,6 +9,8 @@ import { useAuth } from "../context/AuthContext";
 import { getMovie } from "../services/movieService";
 import { getCinema } from "../services/cinemaService";
 import { getSeatMap } from "../services/seatService";
+import { supabase } from "../lib/supabaseClient";
+import { useToast } from "../context/ToastContext";
 import { formatCurrency } from "../lib/format";
 
 export default function SeatSelection() {
@@ -21,6 +23,43 @@ export default function SeatSelection() {
   const [cinema, setCinema] = useState(null);
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { showToast } = useToast();
+  const seatsRef = useRef(seats);
+  const toggleSeatRef = useRef(toggleSeat);
+  const showToastRef = useRef(showToast);
+
+  useEffect(() => {
+    seatsRef.current = seats;
+    toggleSeatRef.current = toggleSeat;
+    showToastRef.current = showToast;
+  });
+
+  useEffect(() => {
+    if (!showtimeId) return;
+    const channel = supabase
+      .channel(`seat-occupancy-${showtimeId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "booking_seats", filter: `showtime_id=eq.${showtimeId}` },
+        (payload) => {
+          const row = payload.eventType === "DELETE" ? payload.old : payload.new;
+          const label = row?.seat_label;
+          if (!label) return;
+          const taken = payload.eventType !== "DELETE" && payload.new.status === "confirmed";
+          setRows((prev) =>
+            prev.map((r) => ({ ...r, seats: r.seats.map((s) => (s.id === label ? { ...s, occupied: taken } : s)) }))
+          );
+          if (taken && seatsRef.current.includes(label)) {
+            toggleSeatRef.current(label);
+            showToastRef.current(`Seat ${label} was just booked by someone else.`);
+          }
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [showtimeId]);
 
   const hasSelection = Boolean(movieId && cinemaId && date && time && showtimeId && screenId);
 
