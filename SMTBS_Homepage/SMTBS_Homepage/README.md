@@ -14,7 +14,7 @@ Live at **[smtbs.vercel.app](https://smtbs.vercel.app)**.
 ## What's real vs. what's not
 
 Everything either app does — customer browsing/booking and every admin
-resource (Movies, Cinemas & Screens, Showtimes, Bookings, Customers,
+resource (Movies, Cinemas & Screens, Showtimes, Offers, Bookings, Customers,
 Dashboard & Reports) — reads and writes the real Supabase tables in
 `supabase/migrations/`, behind Row-Level Security. That includes:
 
@@ -55,8 +55,22 @@ Dashboard & Reports) — reads and writes the real Supabase tables in
   goes through. Best-effort: each row is validated and imported
   independently, so one bad row (missing field, duplicate title) is skipped
   and reported rather than blocking the rest of the file.
+- Real admin CRUD for Offers — the same create/edit/delete pattern as Movies,
+  backed by the real `offers` table, hitting the public Offers page live.
 
 What's honestly not built, rather than faked:
+- Offers are real database rows admins can manage, but the promo `code` on
+  each one is display-only — nothing validates or applies it anywhere.
+  Checkout never checks a code against the `offers` table, and the
+  customer-facing "Use Offer" button just links to `/movies` with nothing
+  attached. There's no discount mechanism in the schema to apply even if it
+  were wired up — `discount`/`validity` are free-text (`"20% OFF"`), not
+  structured percentage/amount data.
+- Loyalty points are earned and displayed for real (1 point per dollar
+  charged, reversed on cancellation — see above), but there's no way to
+  spend them yet: no redeem action anywhere, and no admin visibility into a
+  customer's balance (not shown on the Customers list or detail page). It's
+  accrual only, not yet a working rewards program.
 - Phone number sign-in is scaffolded (`AuthContext.sendPhoneOtp` /
   `verifyPhoneOtp`) but not wired into the UI — needs a paid SMS provider
   (e.g. Twilio) connected in Supabase first.

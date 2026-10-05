@@ -13,6 +13,7 @@ import {
   LogOut,
   ChevronUp,
   Clapperboard,
+  Tag,
   X,
 } from "lucide-react";
 import { useAdminAuth } from "../context/AdminAuthContext";
@@ -22,6 +23,7 @@ const NAV_ITEMS = [
   { to: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/admin/movies", label: "Movies", icon: Film },
   { to: "/admin/cinemas", label: "Cinemas & Screens", icon: Building2 },
+  { to: "/admin/offers", label: "Offers", icon: Tag },
   { to: "/admin/showtimes", label: "Showtimes", icon: CalendarClock },
   { to: "/admin/bookings", label: "Bookings", icon: Ticket },
   { to: "/admin/customers", label: "Customers", icon: Users },

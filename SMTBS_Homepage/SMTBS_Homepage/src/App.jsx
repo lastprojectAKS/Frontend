@@ -35,6 +35,7 @@ const AdminDashboard = lazy(() => import("./admin/pages/Dashboard"));
 const AdminMovies = lazy(() => import("./admin/pages/Movies"));
 const AdminMovieDetails = lazy(() => import("./admin/pages/MovieDetails"));
 const AdminCinemas = lazy(() => import("./admin/pages/Cinemas"));
+const AdminOffers = lazy(() => import("./admin/pages/Offers"));
 const AdminShowtimes = lazy(() => import("./admin/pages/Showtimes"));
 const AdminBookings = lazy(() => import("./admin/pages/Bookings"));
 const AdminBookingDetails = lazy(() => import("./admin/pages/BookingDetails"));
@@ -112,6 +113,7 @@ export default function App() {
           <Route path="/admin/movies" element={<AdminMovies />} />
           <Route path="/admin/movies/:id" element={<AdminMovieDetails />} />
           <Route path="/admin/cinemas" element={<AdminCinemas />} />
+          <Route path="/admin/offers" element={<AdminOffers />} />
           <Route path="/admin/showtimes" element={<AdminShowtimes />} />
           <Route path="/admin/bookings" element={<AdminBookings />} />
           <Route path="/admin/bookings/:id" element={<AdminBookingDetails />} />
